@@ -8,9 +8,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const app = express();
+app.get('/', (req, res) => {
+  res.send('WONJUGA server is live 🎉');
+});
 const db = sqlite3('wonjuga.db');
 
-app.use(cors({origin: "*", methods: ["GET","POST","PUT","DELETE"], allowedHeaders: ["Content-Type","Authorization"]}));
+app.use(cors({origin: "_", methods: ["GET","POST","PUT","DELETE"], allowedHeaders: ["Content-Type","Authorization"]}));
 app.use(express.json());
 app.use(helmet());
 app.use(rateLimit({windowMs:15*60*1000, max:200}));
