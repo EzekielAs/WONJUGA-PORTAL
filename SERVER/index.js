@@ -1,5 +1,6 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
+const db = new Database('wonjuga.db');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const path = require('path');
