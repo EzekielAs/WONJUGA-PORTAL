@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-
+import AdminMembers from './AdminMembers'
 export default function App(){
   const [tab,setTab]=useState('dashboard')
   const [menu,setMenu]=useState(false)
@@ -42,7 +42,7 @@ export default function App(){
             <div style={{width:280,background:'white',height:'100%',padding:16}} onClick={e=>e.stopPropagation()}>
               <div style={{background:'#0d5c3a',color:'white',padding:12,borderRadius:12,marginBottom:12}}><b>WONJUGA WELFARE</b><div style={{fontSize:11,opacity:0.8}}>Staff Welfare Scheme</div></div>
               {[
-                ['🏠 Dashboard','dashboard'],['👤 My Profile','profile'],['🤝 Welfare Support','support'],
+                ['🏠 Dashboard','dashboard'],['👤 My Profile','profile'],['👑 Admin - Add Members','admin_add'],['🤝 Welfare Support','support'],
                 ['📝 My Claims','claims'],['💰 Contributions','contributions'],['📢 Announcements','announcements'],['🔔 Notifications','notifications']
               ].map(([l,id])=>(
                 <div key={id} onClick={()=>{setTab(id); setMenu(false)}} style={{padding:14,background:tab===id?'#e8f5e9':'transparent',borderRadius:10,marginBottom:4,fontSize:13,fontWeight:tab===id?700:400,color:tab===id?'#0d5c3a':'#222',cursor:'pointer'}}>{l}</div>
@@ -121,7 +121,7 @@ export default function App(){
               <button onClick={()=>setPic(null)} style={{marginTop:12,width:'100%',padding:10,border:'1px solid #fecaca',background:'white',color:'#ef4444',borderRadius:10,fontSize:12}}>Remove Picture</button>
             </C>
           </>)}
-
+          {tab==='admin_add' && <AdminMembers/>}
           {tab==='claims' && (<><h2>My Claims</h2><C>My Drafts (0) - You have no drafts yet</C><C>Submitted Claims (0)</C><C>Under Review (0)</C><C>Needs Revision (0)</C></>)}
           {tab==='contributions' && (<><h2>My Contributions</h2><C><b>GHS 50.00 - July 2026 Success</b></C><C><b>GHS 50.00 - Aug 2026 Success</b></C><C><b>Total: GHS 100.00 - 2 Contributions - 29 Aug 2026</b></C></>)}
           {tab==='support' && (<><h2>My Welfare Support</h2><C>No welfare assistance or paid benefits tracked yet</C></>)}
