@@ -86,7 +86,7 @@ let token='', user=null;
 function login(){
  const sn=document.getElementById('serviceNumber').value;
  const ph=document.getElementById('phone').value;
- fetch(API+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serviceNumber:sn,phone:ph})})
+ fetch(API+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serviceNumber:sn,phone:ph})})
  .then(r=>r.json().then(d=>({ok:r.ok,d})))
  .then(({ok,d})=>{
    if(!ok){document.getElementById('msg').innerText=d.error;return}
