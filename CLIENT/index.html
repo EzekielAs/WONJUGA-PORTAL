@@ -5,178 +5,58 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WONJUGA PORTAL</title>
 <style>
-*{box-sizing:border-box;font-family:system-ui}
-body{margin:0;background:#f0f4f8}
-.login{max-width:400px;margin:80px auto;background:white;padding:30px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.1)}
-h1{text-align:center;color:#0f172a}
-input,select,button{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid #ccc}
-button{background:#0f172a;color:white;border:none;font-weight:bold;cursor:pointer}
-button:hover{background:#1e293b}
-.card{background:white;padding:20px;border-radius:12px;margin:10px 0;box-shadow:0 2px 10px rgba(0,0,0,.05)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+*{box-sizing:border-box;font-family:system-ui,sans-serif}
+body{margin:0;background:#f4f4f4}
+.login{max-width:420px;margin:80px auto;background:white;padding:24px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+input,select,button{width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:8px}
+button{background:#129336;color:white;border:none;font-weight:bold;cursor:pointer}
+button:hover{background:#0f7a2b}
 .hidden{display:none}
-.header{background:#0f172a;color:white;padding:15px;display:flex;justify-content:space-between}
-.badge{padding:4px 8px;border-radius:6px;font-size:12px}
-.success{background:#dcfce7;color:#166534}
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px;text-align:left;border-bottom:1px solid #eee;font-size:14px}
+.header{background:#129336;color:white;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;padding:20px;max-width:1100px;margin:auto}
+.card{background:white;padding:16px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px;text-align:left;border-bottom:1px solid #eee}
 </style>
 </head>
 <body>
-
 <div id="loginPage" class="login">
-<h1>WONJUGA</h1>
-<p style="text-align:center">Kumasi Welfare Dues</p>
-<input id="serviceNumber" placeholder="Service Number e.g GH/ADMIN001">
-<input id="phone" placeholder="Phone e.g 0550000001">
+<h2 style="text-align:center">Kumasi Welfare</h2>
+<input id="serviceNumber" placeholder="Service Number">
+<input id="phone" placeholder="Phone">
 <button onclick="login()">LOGIN</button>
 <p id="msg" style="color:red;text-align:center"></p>
-<p style="font-size:11px;text-align:center;color:#666">Admin: GH/ADMIN001 / 0550000001<br>Member: GH/00001 / 0551111111</p>
 </div>
-
 <div id="appPage" class="hidden">
-<div class="header"><b id="userInfo"></b><button onclick="logout()" style="width:auto;padding:6px 12px;background:#ef4444">Logout</button></div>
-<div style="padding:20px;max-width:1100px;margin:auto">
-
-<div id="memberView">
-<div class="grid">
-<div class="card">
-<h3>Pay Dues - MoMo</h3>
-<p style="font-size:12px;color:red">⚠️ MoMo must match registered number</p>
-<input id="payAmount" type="number" value="50">
-<select id="payMonth">
-<option>January 2026</option><option>February 2026</option><option>March 2026</option><option>April 2026</option><option>May 2026</option><option>June 2026</option><option>July 2026</option><option>August 2026</option><option>September 2026</option><option>October 2026</option><option>November 2026</option><option>December 2026</option>
-</select>
-<input id="payMomo" placeholder="MoMo Number">
-<select id="payNetwork"><option value="MTN">MTN</option><option value="Vodafone">Vodafone</option><option value="AirtelTigo">AirtelTigo</option></select>
-<button onclick="pay()">PAY NOW WITH MOMO</button>
-<p id="payMsg"></p>
+<div class="header"><b id="userInfo"></b><button onclick="logout()" style="width:auto;padding:6px 12px;background:#0f5a1f">Logout</button></div>
+<div style="padding:20px"><div id="myProfile"></div><div id="memberTable"></div></div>
 </div>
-<div class="card"><h3>My Profile</h3><div id="profile"></div></div>
-</div>
-<div class="card"><h3>My Payments</h3><table id="myPayments"></table></div>
-<div class="card"><h3>Announcements</h3><div id="ann"></div></div>
-</div>
-
-<div id="adminView" class="hidden">
-<div class="grid">
-<div class="card"><h3>Stats</h3><div id="stats"></div></div>
-<div class="card"><h3>Add Member</h3>
-<input id="mService" placeholder="Service No GH/XXXXX">
-<input id="mName" placeholder="Full Name">
-<input id="mPhone" placeholder="Phone">
-<input id="mRank" placeholder="Rank">
-<input id="mUnit" placeholder="Unit">
-<select id="mRole"><option value="member">Member</option><option value="executive">Executive</option><option value="admin">Admin</option></select>
-<button onclick="addMember()">ADD MEMBER</button><p id="mMsg"></p>
-</div>
-</div>
-<div class="card"><h3>All Members</h3><table id="allMembers"></table></div>
-<div class="card"><h3>All Payments</h3><table id="allPayments"></table></div>
-<div class="card"><h3>Post Announcement</h3><input id="aTitle" placeholder="Title"><input id="aMsg" placeholder="Message"><button onclick="postAnn()">POST</button></div>
-</div>
-
-</div>
-</div>
-
+<script>
 const API = 'https://wonjuga-server.onrender.com/api';
-let token = null;
-
-function login(){
- const sn=document.getElementById('serviceNumber').value;
- const ph=document.getElementById('phone').value;
- fetch(API+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serviceNumber:sn,phone:ph})})
- .then(r=>r.json().then(d=>({ok:r.ok,d})))
- .then(({ok,d})=>{
-   if(!ok){document.getElementById('msg').innerText = d.error || d.message || JSON.stringifty(d);}
-   token=d.token; user=d.user; localStorage.setItem('token',token);
-   showApp();
- })
+let token=null; let user=null;
+function authHeaders(){return {'Content-Type':'application/json','Authorization':'Bearer '+token};}
+async function login(){
+ const sn=document.getElementById('serviceNumber').value.trim();
+ const ph=document.getElementById('phone').value.trim();
+ const msgEl=document.getElementById('msg');
+ msgEl.innerText='Checking...';
+ try{
+  const r=await fetch(API+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idNumber:sn,phone:ph})});
+  const d=await r.json();
+  if(!r.ok){msgEl.innerText=d.error||d.message||JSON.stringify(d); return;}
+  token=d.token; user=d.user;
+  localStorage.setItem('token',token); localStorage.setItem('user',JSON.stringify(user));
+  showApp();
+ }catch(e){msgEl.innerText='Network error: '+e.message;}
 }
-
 function showApp(){
  document.getElementById('loginPage').classList.add('hidden');
  document.getElementById('appPage').classList.remove('hidden');
- document.getElementById('userInfo').innerText=user.serviceNumber+' - '+user.role;
- document.getElementById('profile').innerHTML=`Name: ${user.fullName}<br>Phone: ${user.phone}<br>Unit: ${user.unit}<br>Paid: GHS ${user.totalPaid||0}<br>MoMo: ${user.momoNumber}`;
- document.getElementById('payMomo').value=user.momoNumber||user.phone;
- loadMyPayments(); loadAnn();
- if(user.role==='admin'||user.role==='executive'){
-   document.getElementById('adminView').classList.remove('hidden');
-   loadAll();
- } else {
-   document.getElementById('memberView').classList.remove('hidden');
- }
+ const u=user||JSON.parse(localStorage.getItem('user')||'{}');
+ if(u&&u.idNumber){document.getElementById('userInfo').innerText=u.idNumber+' ('+u.role+')';}
 }
-
-function authHeaders(){return {'Content-Type':'application/json','Authorization':'Bearer '+token}}
-
-function pay(){
- const body={
-   amount:parseFloat(document.getElementById('payAmount').value),
-   month:document.getElementById('payMonth').value,
-   momoNumber:document.getElementById('payMomo').value,
-   network:document.getElementById('payNetwork').value
- };
- fetch(API+'/pay',{method:'POST',headers:authHeaders(),body:JSON.stringify(body)})
- .then(r=>r.json().then(d=>({ok:r.ok,d})))
- .then(({ok,d})=>{
-   document.getElementById('payMsg').innerText=ok?'SUCCESS Receipt: '+d.payment.receipt_no+' Txn: '+d.payment.transaction_id:d.error;
-   if(ok){document.getElementById('payMsg').style.color='green'; loadMyPayments();}
- })
-}
-
-function loadMyPayments(){
- fetch(API+'/my-payments',{headers:authHeaders()}).then(r=>r.json()).then(rows=>{
-   let h='<tr><th>Receipt</th><th>Month</th><th>Amount</th><th>Status</th></tr>';
-   rows.forEach(r=>{h+=`<tr><td>${r.receipt_no}</td><td>${r.month}</td><td>${r.amount}</td><td><span class="badge success">${r.status}</span></td></tr>`});
-   document.getElementById('myPayments').innerHTML=h;
- })
-}
-
-function loadAnn(){
- fetch(API+'/announcements',{headers:authHeaders()}).then(r=>r.json()).then(rows=>{
-   document.getElementById('ann').innerHTML=rows.map(r=>`<p><b>${r.title}</b><br>${r.message}<br><small>${r.created_at}</small></p>`).join('');
- })
-}
-
-function loadAll(){
- fetch(API+'/stats',{headers:authHeaders()}).then(r=>r.json()).then(s=>{document.getElementById('stats').innerHTML=`Members: ${s.totalMembers}<br>Collected: GHS ${s.totalCollected}`});
- fetch(API+'/members',{headers:authHeaders()}).then(r=>r.json()).then(rows=>{
-   let h='<tr><th>Service No</th><th>Name</th><th>Phone</th><th>Paid</th></tr>';
-   rows.forEach(r=>{h+=`<tr><td>${r.service_number}</td><td>${r.full_name}</td><td>${r.phone}</td><td>${r.total_paid}</td></tr>`});
-   document.getElementById('allMembers').innerHTML=h;
- });
- fetch(API+'/all-payments',{headers:authHeaders()}).then(r=>r.json()).then(rows=>{
-   let h='<tr><th>Receipt</th><th>Service No</th><th>Amount</th><th>MoMo</th></tr>';
-   rows.forEach(r=>{h+=`<tr><td>${r.receipt_no}</td><td>${r.service_number}</td><td>${r.amount}</td><td>${r.momo_number}</td></tr>`});
-   document.getElementById('allPayments').innerHTML=h;
- });
-}
-
-function addMember(){
- const body={
-   serviceNumber:document.getElementById('mService').value,
-   fullName:document.getElementById('mName').value,
-   phone:document.getElementById('mPhone').value,
-   rank:document.getElementById('mRank').value,
-   unit:document.getElementById('mUnit').value,
-   role:document.getElementById('mRole').value,
-   momoNumber:document.getElementById('mPhone').value
- };
- fetch(API+'/members',{method:'POST',headers:authHeaders(),body:JSON.stringify(body)})
- .then(r=>r.json()).then(d=>{
-   document.getElementById('mMsg').innerText=d.error||'Member Added: '+d.service_number;
-   loadAll();
- })
-}
-
-function postAnn(){
- fetch(API+'/announcements',{method:'POST',headers:authHeaders(),body:JSON.stringify({title:document.getElementById('aTitle').value, message:document.getElementById('aMsg').value})})
- .then(r=>r.json()).then(()=>{loadAnn();})
-}
-
-function logout(){localStorage.clear();location.reload()}
+function logout(){localStorage.clear(); location.reload();}
+(function(){const t=localStorage.getItem('token'); const u=localStorage.getItem('user'); if(t&&u){token=t; user=JSON.parse(u); showApp();}})();
 </script>
 </body>
 </html>
