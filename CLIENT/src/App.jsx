@@ -1,5 +1,12 @@
 import { useState, useRef } from 'react'
 import AdminMembers from './AdminMembers'
+import MemberJoin from './MemberJoin'
+
+// ... inside App function, first lines:
+const storedUser = JSON.parse(localStorage.getItem('wonjuga_user')||'null')
+if(!storedUser){
+  return <MemberJoin/>
+}
 export default function App(){
   const [tab,setTab]=useState('dashboard')
   const [menu,setMenu]=useState(false)
