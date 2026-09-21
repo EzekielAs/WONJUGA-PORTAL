@@ -79,9 +79,8 @@ th,td{padding:8px;text-align:left;border-bottom:1px solid #eee;font-size:14px}
 </div>
 </div>
 
-<script>
-  const API = 'https://wonjuga-server.onrender.com/api'
-let token='', user=null;
+const API = 'https://wonjuga-server.onrender.com/api';
+let token = null;
 
 function login(){
  const sn=document.getElementById('serviceNumber').value;
@@ -89,7 +88,7 @@ function login(){
  fetch(API+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serviceNumber:sn,phone:ph})})
  .then(r=>r.json().then(d=>({ok:r.ok,d})))
  .then(({ok,d})=>{
-   if(!ok){document.getElementById('msg').innerText=d.error;return}
+   if(!ok){document.getElementById('msg').innerText = d.error || d.message || JSON.stringifty(d);}
    token=d.token; user=d.user; localStorage.setItem('token',token);
    showApp();
  })
