@@ -1,9 +1,12 @@
 const express = require('express');
 const Database = require('better-sqlite3');
-const db = new Database('wonjuga.db');
+const path = require('path');
+const db = new Database(path.join(__dirname, 'wonjuga.db'));
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const path = require('path');
+
+const app = express();
+app.use(cors({ origin: '*' }));
 
 const app = express();
 app.use(cors({ origin: '*' }));
@@ -16,7 +19,7 @@ app.use(cors());
 app.use(express.json());
 app.use(rateLimit({windowMs:15*60*1000,max:200}));
 
-const db=new sqlite3.Database(path.join(__dirname,'wonjuga.db'), (err)=>{
+const db = new sqlite3.Database(path.join(__dirname, 'wonjuga.db'), ...
   if(err) console.error(err); else console.log('SQLITE CONNECTED');
 });
 
