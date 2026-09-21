@@ -27,7 +27,6 @@ CREATE TABLE IF NOT EXISTS users (
     momo_number TEXT, total_paid REAL DEFAULT 0,
     last_payment_date TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS payments (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
     amount REAL, month TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP
