@@ -56,9 +56,16 @@ app.post('/api/login', (req,res) => {
     }
 });
 
-app.get('/api/users', (req,res) => {
-    const users = db.prepare('SELECT * FROM users').all();
-    res.json(users);
+function auth(req,res,next){
+  const token = req.headers.authorization?.split(' ')[1];
+  if(!token) return res.status(401).json({error:'No token'});
+  try { req.user = jwt.verify(token, process.env.JWT_SECRET || 'secret123'); next(); }
+  catch { return res.status(403).json({error:'Invalid token'}); }
+}
+
+app.get('/api/users', auth, (req,res) => {
+  const users = db.prepare('SELECT id, service_number, full_name, phone, rank, unit, role, status, momo_number, total_paid, last_payment_date, created_at FROM users').all();
+  res.json(users);
 });
 
 // THIS IS THE IMPORTANT PART THAT WAS MISSING
