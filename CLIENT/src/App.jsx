@@ -1,176 +1,135 @@
 import { useState, useRef } from 'react'
-import axios from 'axios'
-const API_URL = import.meta.env.VITE_API_URL
 
-export default function App() {
-  const [staffId, setStaffId] = useState('')
-  const [phone, setPhone] = useState('')
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('wonjuga_user') || 'null'))
-  const [error, setError] = useState('')
-  const [tab, setTab] = useState('home')
-  const [showProfileForm, setShowProfileForm] = useState(false)
-  const [profilePic, setProfilePic] = useState(localStorage.getItem('wonjuga_pic') || null)
-  const fileInputRef = useRef(null)
-  const [contributions, setContributions] = useState([
-    { id: 1, date: '2026-07-15', amount: 'GHS 50', status: 'Success' },
-    { id: 2, date: '2026-08-15', amount: 'GHS 50', status: 'Success' },
-  ])
-
-  const handleLogin = async (e) => {
-    e.preventDefault()
-    try {
-      const res = await axios.post(`${API_URL}/login`, { idNumber: staffId, phone })
-      localStorage.setItem('wonjuga_user', JSON.stringify(res.data.user))
-      setUser(res.data.user)
-    } catch { setError('Wrong ID or Phone') }
+export default function App(){
+  const [tab,setTab]=useState('dashboard')
+  const [menu,setMenu]=useState(false)
+  const [pic,setPic]=useState(localStorage.getItem('wonjuga_pic')||null)
+  const fileRef=useRef(null)
+  const onPic=e=>{
+    const f=e.target.files[0]; if(!f) return
+    const r=new FileReader()
+    r.onloadend=()=>{ setPic(r.result); localStorage.setItem('wonjuga_pic',r.result)}
+    r.readAsDataURL(f)
   }
 
-  const makeContribution = () => {
-    const newC = { id: contributions.length + 1, date: new Date().toISOString().slice(0,10), amount: 'GHS 50', status: 'Success' }
-    setContributions([...contributions, newC])
-  }
+  const C=({children})=> <div style={{background:'white',borderRadius:16,padding:16,marginBottom:12,border:'1px solid #e9ece4',boxShadow:'0 2px 8px rgba(0,0,0,0.03)'}}>{children}</div>
 
-  const handlePicUpload = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setProfilePic(reader.result)
-      localStorage.setItem('wonjuga_pic', reader.result)
-    }
-    reader.readAsDataURL(file)
-  }
+  return(
+    <div style={{minHeight:'100vh',background:'#f4f5f0',fontFamily:'Inter,system-ui,sans-serif',display:'flex',justifyContent:'center'}}>
+      <div style={{width:'100%',maxWidth:420,background:'#f4f5f0',minHeight:'100vh',position:'relative'}}>
 
-  if (!user) {
-    return (
-      <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f0f4f2', fontFamily:'sans-serif'}}>
-        <form onSubmit={handleLogin} style={{background:'white', padding:28, borderRadius:20, width:340, boxShadow:'0 10px 30px rgba(0,0,0,0.08)'}}>
-          <div style={{textAlign:'center', marginBottom:20}}>
-            <div style={{width:50, height:50, background:'#0d5c3a', borderRadius:12, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontWeight:'bold', fontSize:20}}>W</div>
-            <h1 style={{marginTop:12, fontWeight:800, fontSize:22}}>WONJUGA</h1>
-            <p style={{fontSize:12, color:'#888'}}>Staff Welfare Portal</p>
-          </div>
-          <input style={{width:'100%', padding:13, margin:'8px 0', border:'1px solid #ddd', borderRadius:10}} placeholder="GH/ADMIN001" value={staffId} onChange={e=>setStaffId(e.target.value)} required />
-          <input style={{width:'100%', padding:13, margin:'8px 0', border:'1px solid #ddd', borderRadius:10}} placeholder="0550000001" value={phone} onChange={e=>setPhone(e.target.value)} required />
-          {error && <p style={{color:'red', fontSize:12, textAlign:'center'}}>{error}</p>}
-          <button style={{width:'100%', background:'#0d5c3a', color:'white', padding:13, borderRadius:10, marginTop:12, fontWeight:700, border:'none'}}>Login</button>
-        </form>
-      </div>
-    )
-  }
-
-  const completed = contributions.length
-  const required = 6
-  const displayCompleted = Math.min(completed, required)
-  const percent = Math.min((completed / required) * 100, 100)
-  const eligible = completed >= required
-
-  return (
-    <div style={{minHeight:'100vh', background:'#f8faf9', fontFamily:'sans-serif', display:'flex', justifyContent:'center'}}>
-      <div style={{width:'100%', maxWidth:420, background:'#f8faf9', minHeight:'100vh', position:'relative', paddingBottom:80}}>
-        
-        <div style={{background:'white', padding:'14px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #eee'}}>
-          <div style={{display:'flex', gap:10, alignItems:'center'}}>
-            <div onClick={()=>fileInputRef.current.click()} style={{width:38, height:38, background: profilePic ? `url(${profilePic})` : '#0d5c3a', backgroundSize:'cover', backgroundPosition:'center', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontWeight:'bold', fontSize:12, cursor:'pointer', border:'2px solid #0d5c3a'}}>
-              {!profilePic && 'EA'}
+        {/* HEADER */}
+        <div style={{background:'white',padding:'10px 14px',display:'flex',justifyContent:'space-between',alignItems:'center',position:'sticky',top:0,zIndex:20,borderBottom:'1px solid #eee'}}>
+          <div style={{display:'flex',gap:10,alignItems:'center'}}>
+            <span onClick={()=>setMenu(true)} style={{fontSize:20,cursor:'pointer'}}>☰</span>
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              <div style={{width:32,height:32,borderRadius:'50%',background:pic?`url(${pic})`:'#d9d9d9',backgroundSize:'cover',backgroundPosition:'center'}}></div>
+              <div><div style={{fontSize:12,fontWeight:700}}>Ezekiel Asomani</div><div style={{fontSize:9,color:'#888'}}>GH/ADMIN001</div></div>
             </div>
-            <div><div style={{fontWeight:700, fontSize:13}}>Ezekiel Asomani</div><div style={{fontSize:10, color:'#777'}}>{user.idNumber} • Click pic to change</div></div>
           </div>
-          <button onClick={()=>{localStorage.clear(); setUser(null)}} style={{background:'#fff1f1', color:'#ff3b30', border:'1px solid #ffd1d1', padding:'6px 12px', borderRadius:20, fontSize:11, fontWeight:700}}>Logout</button>
+          <div style={{display:'flex',gap:8}}><span>🔔</span><span style={{background:'red',color:'white',borderRadius:'50%',fontSize:9,padding:'2px 5px'}}>0</span></div>
         </div>
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePicUpload} style={{display:'none'}} />
 
-        {tab === 'home' && (
-        <div style={{padding:16}}>
-          <p style={{fontSize:11, color:'#6b7280'}}>Complete your profile to access all welfare services.</p>
-          <button onClick={()=>setShowProfileForm(true)} style={{width:'100%', background:'#0d5c3a', color:'white', padding:12, borderRadius:10, marginTop:8, fontWeight:700, border:'none', fontSize:13}}>Complete Profile</button>
+        {/* COMPLETE PROFILE BANNER */}
+        <div style={{background:'#fef9c3',padding:'10px 14px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <span style={{fontSize:11}}>Complete your profile to access all welfare services.</span>
+          <button onClick={()=>setTab('profile')} style={{background:'#0d5c3a',color:'white',border:'none',borderRadius:20,padding:'6px 12px',fontSize:11,fontWeight:700}}>Complete Profile</button>
+        </div>
 
-          <div style={{marginTop:22}}>
-            <p style={{fontSize:13, color:'#374151'}}>Good Evening, GH 👋</p>
-            <h1 style={{fontSize:22, fontWeight:800, color:'#0d5c3a', margin:'4px 0'}}>My Welfare Journey</h1>
-            <div style={{background:'#eef6ff', borderRadius:16, padding:18, marginTop:14, border:'1px solid #dbeafe'}}>
-              <h3 style={{fontWeight:700, color:'#1e3a5f', fontSize:14, margin:0}}>♡ You're building your welfare foundation</h3>
-              <p style={{fontSize:12, color:'#4b5563', marginTop:10}}>You have completed {displayCompleted} of {required} contributions.</p>
-              <p style={{fontWeight:700, fontSize:12, marginTop:12}}>Current Welfare Points: {completed}</p>
-              <div style={{background:'white', height:8, borderRadius:10, marginTop:12, overflow:'hidden'}}><div style={{background: eligible ? '#16a34a' : '#0d5c3a', width:`${percent}%`, height:'100%'}}></div></div>
-              <div style={{display:'flex', justifyContent:'space-between', marginTop:6}}><p style={{fontSize:10, color:'#777'}}>{displayCompleted}/{required} completed</p><p style={{fontSize:10, color:'#0d5c3a', fontWeight:700}}>{Math.round(percent)}%</p></div>
-              <button onClick={makeContribution} style={{width:'100%', background:'#0d5c3a', color:'white', padding:10, borderRadius:8, marginTop:12, border:'none', fontWeight:700, fontSize:12}}>+ Make Test Contribution</button>
-            </div>
-
-            <div style={{marginTop:14, background:'white', borderRadius:16, padding:16, border:'1px solid #eef2f7'}}>
-              <h3 style={{fontWeight:700, fontSize:13, margin:0}}>Progress Summary</h3>
-              <span style={{display:'inline-block', marginTop:10, background: eligible ? '#dcfce7' : '#dbeafe', color: eligible ? '#166534' : '#1d4ed8', fontSize:10, padding:'4px 10px', borderRadius:20, fontWeight:600}}>{eligible ? 'Eligible for Claims' : 'Building Foundation'}</span>
-              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginTop:14}}>
-                <div style={{background:'#f8fafc', padding:10, borderRadius:10}}><p style={{fontSize:9, color:'#888'}}>CONTRIBUTIONS</p><p style={{fontWeight:800, fontSize:16}}>{displayCompleted} / {required}</p></div>
-                <div style={{background:'#f0fdf4', padding:10, borderRadius:10}}><p style={{fontSize:9, color:'#888'}}>POINTS</p><p style={{fontWeight:800, fontSize:16, color:'#0d5c3a'}}>{completed} pts</p></div>
-              </div>
-            </div>
-
-            <div style={{marginTop:14, background:'white', borderRadius:16, padding:16, border:'1px solid #eef2f7'}}>
-              <h3 style={{fontWeight:700, fontSize:13, margin:0}}>Contribution History</h3>
-              {contributions.slice().reverse().map(c=>(
-                <div key={c.id} style={{display:'flex', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid #f1f5f9', fontSize:12}}>
-                  <span>{c.date}</span><span>{c.amount}</span><span style={{color:'#16a34a', fontWeight:700}}>{c.status}</span>
-                </div>
+        {/* DRAWER */}
+        {menu && (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:50}} onClick={()=>setMenu(false)}>
+            <div style={{width:280,background:'white',height:'100%',padding:16}} onClick={e=>e.stopPropagation()}>
+              <div style={{background:'#0d5c3a',color:'white',padding:12,borderRadius:12,marginBottom:12}}><b>WONJUGA WELFARE</b><div style={{fontSize:11,opacity:0.8}}>Staff Welfare Scheme</div></div>
+              {[
+                ['🏠 Dashboard','dashboard'],['👤 My Profile','profile'],['🤝 Welfare Support','support'],
+                ['📝 My Claims','claims'],['💰 Contributions','contributions'],['📢 Announcements','announcements'],['🔔 Notifications','notifications']
+              ].map(([l,id])=>(
+                <div key={id} onClick={()=>{setTab(id); setMenu(false)}} style={{padding:14,background:tab===id?'#e8f5e9':'transparent',borderRadius:10,marginBottom:4,fontSize:13,fontWeight:tab===id?700:400,color:tab===id?'#0d5c3a':'#222',cursor:'pointer'}}>{l}</div>
               ))}
+              <button onClick={()=>{localStorage.clear(); location.reload()}} style={{marginTop:20,width:'100%',padding:10,border:'1px solid #fecaca',background:'#fff1f2',borderRadius:10,color:'#ef4444',fontSize:12}}>Logout</button>
             </div>
           </div>
+        )}
+
+        <div style={{padding:14,paddingBottom:90}}>
+          {tab==='dashboard' && (<>
+            <p style={{fontSize:13,margin:0}}>Good Evening, Ezekiel 👋</p>
+            <h2 style={{fontSize:20,fontWeight:800,margin:'4px 0'}}>My Welfare Journey</h2>
+            <p style={{fontSize:11,color:'#666',marginBottom:12}}>Here's your Welfare Journey</p>
+
+            <C>
+              <div style={{display:'flex',gap:6}}><span>💎</span><b style={{fontSize:13}}>You're building your welfare foundation</b></div>
+              <p style={{fontSize:11,color:'#555',marginTop:8,lineHeight:'16px'}}>You have successfully completed 2 of the required 6 contributions to become eligible for welfare claims.</p>
+              <div style={{background:'#f6f7f3',padding:8,borderRadius:8,marginTop:8}}><span style={{fontSize:11}}><b>Current Welfare Points: 2</b></span></div>
+            </C>
+
+            <C>
+              <b style={{fontSize:13}}>Progress Summary</b>
+              <p style={{fontSize:11,color:'#777'}}>Engage, contribution position from the Progression</p>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginTop:12}}>
+                <div><p style={{fontSize:9,color:'#999'}}>MEMBERSHIP STATUS</p><span style={{fontSize:11,background:'#fef3c7',color:'#92400e',padding:'3px 8px',borderRadius:12,fontWeight:700}}>Non eligible yet</span></div>
+                <div><p style={{fontSize:9,color:'#999'}}>WELFARE POINTS</p><b style={{fontSize:12}}>2 / 36</b></div>
+                <div><p style={{fontSize:9,color:'#999'}}>MEMBER SINCE</p><b style={{fontSize:11}}>27 Aug 2025</b></div>
+                <div><p style={{fontSize:9,color:'#999'}}>MATURITY DATE</p><b style={{fontSize:11}}>27 Aug 2026</b></div>
+              </div>
+            </C>
+
+            <C>
+              <b style={{fontSize:12}}>🏅 Achievement Badge</b>
+              <div style={{textAlign:'center',marginTop:12}}>
+                <div style={{width:56,height:56,background:'#e8f5e9',borderRadius:'50%',margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28}}>🌱</div>
+                <b style={{fontSize:13,display:'block',marginTop:8}}>Starter Member</b>
+                <span style={{fontSize:10,color:'#777'}}>0-5 Welfare Points - Building foundation</span>
+              </div>
+            </C>
+
+            <C><p style={{fontSize:11,color:'#888'}}>WELFARE PROGRESS</p><b>0%</b><p style={{fontSize:10,color:'#777'}}>Benefit percentage toward 36</p><div style={{background:'#eee',height:6,borderRadius:10,marginTop:8}}><div style={{width:'5%',height:'100%',background:'#0d5c3a'}}></div></div><p style={{fontSize:10,marginTop:6}}>2 / 36 Welfare Points</p></C>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              <C><p style={{fontSize:9}}>NEXT MILESTONE</p><b style={{fontSize:11}}>6 Welfare Points</b><p style={{fontSize:9,color:'#777'}}>Only 4 more needed</p></C>
+              <C><p style={{fontSize:9}}>MEMBERSHIP MATURITY</p><b style={{fontSize:11}}>25%</b><p style={{fontSize:9,color:'#777'}}>Next: 50% benefit</p></C>
+              <C><p style={{fontSize:9}}>CONTRIBUTION STREAK</p><b>2</b><p style={{fontSize:9}}>Months</p></C>
+              <C><p style={{fontSize:9}}>OUTSTANDING MONTHS</p><b>1</b><p style={{fontSize:9}}>Clear to maintain active</p><button style={{marginTop:6,background:'#0d5c3a',color:'white',border:'none',borderRadius:6,padding:'4px 10px',fontSize:10}}>Pay Now</button></C>
+            </div>
+
+            <C><b style={{fontSize:12}}>Why Consistency Matters</b><p style={{fontSize:11,color:'#555',marginTop:6}}>Regular contributions increase your benefit percentage and strengthen your future claims.</p><button onClick={()=>setTab('contributions')} style={{width:'100%',marginTop:10,background:'#eef6ee',border:'1px solid #c6eac6',color:'#0d5c3a',padding:10,borderRadius:10,fontSize:12,fontWeight:700}}>View All Welfare</button></C>
+
+            <C><b style={{fontSize:12}}>📜 Official Welfare Constitution</b><p style={{fontSize:11,color:'#555',marginTop:6}}>The governing document for the GIS Welfare Scheme.</p><button style={{width:'100%',marginTop:10,background:'#0d5c3a',color:'white',border:'none',padding:10,borderRadius:10,fontSize:12}}>View Constitution</button></C>
+
+            <C>
+              <b style={{fontSize:13}}>Member Overview</b>
+              <div style={{display:'flex',justifyContent:'space-between',marginTop:12}}>
+                <div><p style={{fontSize:9,color:'#999'}}>TOTAL CONTRIBUTIONS</p><b style={{fontSize:16}}>2</b></div>
+                <div><p style={{fontSize:9,color:'#999'}}>TOTAL AMOUNT PAID</p><b style={{fontSize:16}}>GHS 100.00</b></div>
+              </div>
+              <p style={{fontSize:10,color:'#777',marginTop:10}}>LAST PAYMENT: 29 Aug 2026 • GHS 50.00 Monthly • Payment method: Mobile Money</p>
+            </C>
+          </>)}
+
+          {tab==='profile' && (<>
+            <h2 style={{fontSize:18,fontWeight:800}}>My Profile</h2>
+            <C>
+              <div style={{display:'flex',justifyContent:'space-between'}}><b style={{fontSize:13}}>My Profile</b><span style={{fontSize:11,background:'#fef3c7',padding:'4px 8px',borderRadius:10}}>27% Complete</span></div>
+              <div onClick={()=>fileRef.current.click()} style={{width:90,height:90,borderRadius:'50%',margin:'14px auto',background:pic?`url(${pic})`:'#eee',backgroundSize:'cover',backgroundPosition:'center',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,border:'3px solid #0d5c3a',cursor:'pointer'}}>{!pic && '📷'}</div>
+              <p style={{textAlign:'center',fontSize:11,color:'#0d5c3a',fontWeight:700,cursor:'pointer'}} onClick={()=>fileRef.current.click()}>Edit Photo - Click to upload picture</p>
+              <input ref={fileRef} type="file" accept="image/*" onChange={onPic} style={{display:'none'}}/>
+              <div style={{marginTop:16,fontSize:12,lineHeight:'24px'}}>
+                <p><b>Full Name:</b> Ezekiel Asomani</p><p><b>Staff ID:</b> GH/ADMIN001</p><p><b>Phone:</b> 0550000001</p><p><b>Status:</b> Active Member ✅</p>
+                <p style={{marginTop:10,color:'#0d5c3a',fontWeight:700}}>✅ Picture upload works perfectly!</p>
+              </div>
+              <button onClick={()=>setPic(null)} style={{marginTop:12,width:'100%',padding:10,border:'1px solid #fecaca',background:'white',color:'#ef4444',borderRadius:10,fontSize:12}}>Remove Picture</button>
+            </C>
+          </>)}
+
+          {tab==='claims' && (<><h2>My Claims</h2><C>My Drafts (0) - You have no drafts yet</C><C>Submitted Claims (0)</C><C>Under Review (0)</C><C>Needs Revision (0)</C></>)}
+          {tab==='contributions' && (<><h2>My Contributions</h2><C><b>GHS 50.00 - July 2026 Success</b></C><C><b>GHS 50.00 - Aug 2026 Success</b></C><C><b>Total: GHS 100.00 - 2 Contributions - 29 Aug 2026</b></C></>)}
+          {tab==='support' && (<><h2>My Welfare Support</h2><C>No welfare assistance or paid benefits tracked yet</C></>)}
+          {tab==='announcements' && (<><h2>Announcements</h2><C>No announcements from the welfare office</C></>)}
+          {tab==='notifications' && (<><h2>Notification Centre</h2><C>✅ Payment Received - GHS 50 - 29 Aug 2026</C><C>✅ Contribution Received - 2 Months Streak</C></>)}
         </div>
-        )}
 
-        {tab === 'claims' && (
-          <div style={{padding:16}}>
-            <h2 style={{fontWeight:800, fontSize:18, color:'#0d5c3a'}}>Welfare Claims</h2>
-            {!eligible ? (
-              <div style={{background:'#fef2f2', padding:16, borderRadius:12, marginTop:16, border:'1px solid #fecaca'}}><p style={{fontSize:13, fontWeight:700, color:'#dc2626'}}>Not Eligible Yet</p><p style={{fontSize:12, color:'#991b1b', marginTop:6}}>Complete {required} contributions. You have {displayCompleted}/{required}.</p></div>
-            ) : (
-              <div style={{background:'#f0fdf4', padding:16, borderRadius:12, marginTop:16, border:'1px solid #bbf7d0'}}><p style={{fontSize:13, fontWeight:700, color:'#166534'}}>Eligible! 🎉</p><button style={{width:'100%', background:'#0d5c3a', color:'white', padding:12, borderRadius:10, marginTop:12, border:'none', fontWeight:700}}>Request Welfare Support</button></div>
-            )}
-          </div>
-        )}
-
-        {tab === 'profile' && (
-          <div style={{padding:16}}>
-            <h2 style={{fontWeight:800, fontSize:18, color:'#0d5c3a'}}>My Profile</h2>
-            <div style={{background:'white', padding:20, borderRadius:16, marginTop:16, textAlign:'center', border:'1px solid #eef2f7'}}>
-              <div onClick={()=>fileInputRef.current.click()} style={{width:90, height:90, borderRadius:'50%', margin:'0 auto', background: profilePic ? `url(${profilePic})` : '#e2e8f0', backgroundSize:'cover', backgroundPosition:'center', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:800, color:'#64748b', cursor:'pointer', border:'3px solid #0d5c3a'}}>
-                {!profilePic && 'EA'}
-              </div>
-              <p style={{fontSize:12, color:'#0d5c3a', marginTop:8, fontWeight:700, cursor:'pointer'}} onClick={()=>fileInputRef.current.click()}>📷 Click to upload/change picture</p>
-              {profilePic && <button onClick={()=>{setProfilePic(null); localStorage.removeItem('wonjuga_pic')}} style={{marginTop:8, fontSize:11, color:'#ff3b30', background:'none', border:'none'}}>Remove picture</button>}
-              <div style={{textAlign:'left', marginTop:20}}>
-                <p style={{fontSize:13, marginTop:10}}><b>Name:</b> Ezekiel Asomani</p>
-                <p style={{fontSize:13, marginTop:10}}><b>Staff ID:</b> {user.idNumber}</p>
-                <p style={{fontSize:13, marginTop:10}}><b>Phone:</b> 0550000001</p>
-                <p style={{fontSize:13, marginTop:10}}><b>Status:</b> Active Member ✅</p>
-                <button onClick={()=>setShowProfileForm(true)} style={{width:'100%', background:'white', border:'1px solid #0d5c3a', color:'#0d5c3a', padding:12, borderRadius:10, marginTop:20, fontWeight:700}}>Edit Profile</button>
-              </div>
-            </div>
-            <p style={{fontSize:10, color:'#999', textAlign:'center', marginTop:12}}>Picture saved locally for test. For real app, we will save to server.</p>
-          </div>
-        )}
-
-        {showProfileForm && (
-          <div style={{position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100, padding:16}}>
-            <div style={{background:'white', padding:20, borderRadius:16, width:'100%', maxWidth:360}}>
-              <h3 style={{fontWeight:700}}>Complete Profile</h3>
-              <div onClick={()=>fileInputRef.current.click()} style={{width:70, height:70, borderRadius:'50%', margin:'10px auto', background: profilePic ? `url(${profilePic})` : '#e2e8f0', backgroundSize:'cover', backgroundPosition:'center', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer'}}> {!profilePic && '📷'}</div>
-              <input placeholder="Full Name" defaultValue="Ezekiel Asomani" style={{width:'100%', padding:10, marginTop:10, border:'1px solid #ddd', borderRadius:8}} />
-              <input placeholder="Department" style={{width:'100%', padding:10, marginTop:10, border:'1px solid #ddd', borderRadius:8}} />
-              <input placeholder="Rank" style={{width:'100%', padding:10, marginTop:10, border:'1px solid #ddd', borderRadius:8}} />
-              <div style={{display:'flex', gap:10, marginTop:16}}>
-                <button onClick={()=>setShowProfileForm(false)} style={{flex:1, padding:10, borderRadius:8, border:'1px solid #ddd', background:'white'}}>Cancel</button>
-                <button onClick={()=>setShowProfileForm(false)} style={{flex:1, padding:10, borderRadius:8, border:'none', background:'#0d5c3a', color:'white', fontWeight:700}}>Save</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div style={{position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:420, background:'white', borderTop:'1px solid #eee', display:'flex', justifyContent:'space-around', padding:'12px 0'}}>
-          <span onClick={()=>setTab('home')} style={{fontSize:12, fontWeight: tab==='home'?700:400, color: tab==='home'?'#0d5c3a':'#aaa', cursor:'pointer'}}>⌂ Home</span>
-          <span onClick={()=>setTab('claims')} style={{fontSize:12, fontWeight: tab==='claims'?700:400, color: tab==='claims'?'#0d5c3a':'#aaa', cursor:'pointer'}}>◈ Claims</span>
-          <span onClick={()=>setTab('profile')} style={{fontSize:12, fontWeight: tab==='profile'?700:400, color: tab==='profile'?'#0d5c3a':'#aaa', cursor:'pointer'}}>👤 Profile</span>
-        </div>
+        <div style={{position:'fixed',bottom:18,right:18,width:50,height:50,background:'#25D366',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,boxShadow:'0 4px 12px rgba(0,0,0,0.2)'}}>💬</div>
       </div>
     </div>
   )
