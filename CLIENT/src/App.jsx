@@ -14,7 +14,7 @@ export default function App(){
     e.preventDefault()
     setError(''); setLoading(true)
     try{
-     const res = await axios.post(`${API_URL}/api/login`, { idNumber: staffId, phone })
+     const res = await axios.post(`${API_URL}/login`, { idNumber: staffId, phone })
       setUser(res.data)
     }catch(err){
       setError((err.response?.data?.message || err.message) + ` API:${API_URL}`)
