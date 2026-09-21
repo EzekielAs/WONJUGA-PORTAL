@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html><body style="font-family:Arial;padding:50px">
+<h1>WONJUGA Test Login</h1>
+<input id="u" placeholder="Username" value="mainadmin"><br><br>
+<input id="p" type="password" placeholder="Password" value="MaNa@Yaa/93"><br><br>
+<button onclick="login()">LOGIN</button>
+<p id="result"></p>
+<script>
+async function login(){
+  const res = await fetch('http://localhost:8080/api/login',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({username:u.value, password:p.value})
+  });
+  const data = await res.json();
+  result.innerText = JSON.stringify(data, null, 2);
+}
+</script>
+</body></html>
