@@ -50,8 +50,24 @@ if(!storedUser){
             <div style={{width:280,background:'white',height:'100%',padding:16}} onClick={e=>e.stopPropagation()}>
               <div style={{background:'#0d5c3a',color:'white',padding:12,borderRadius:12,marginBottom:12}}><b>WONJUGA WELFARE</b><div style={{fontSize:11,opacity:0.8}}>Staff Welfare Scheme</div></div>
               {[
-                ['🏠 Dashboard','dashboard'],['👤 My Profile','profile'],['👑 Admin - Add Members','admin_add'],['🤝 Welfare Support','support'],
-                ['📝 My Claims','claims'],['💰 Contributions','contributions'],['📢 Announcements','announcements'],['🔔 Notifications','notifications']
+             {(() => {
+  const isAdmin = user.idNumber?.toUpperCase() === 'GH/ADMIN' || user.fullName?.toLowerCase().includes('admin')
+  const menuItems = [
+    ['🏠 Dashboard','dashboard'],
+    ['👤 My Profile','profile'],
+    ...(isAdmin ? [['👑 Admin - Add Members','admin_add']] : []),
+    ['🤝 Welfare Support','support'],
+    ['📝 My Claims','claims'],
+    ['💰 Contributions','contributions'],
+    ['📢 Announcements','announcements'],
+    ['🔔 Notifications','notifications'],
+  ]
+  return menuItems.map(([label,key])=>(
+    <div key={key} onClick={()=>{setTab(key);setMenu(false)}} style={{padding:'12px 16px',background:tab===key?'#0d5c3a':'white',color:tab===key?'white':'#333',borderRadius:10,marginBottom:6,cursor:'pointer',fontSize:13,fontWeight:600}}>
+      {label}
+    </div>
+  ))
+})()} 
               ].map(([l,id])=>(
                 <div key={id} onClick={()=>{setTab(id); setMenu(false)}} style={{padding:14,background:tab===id?'#e8f5e9':'transparent',borderRadius:10,marginBottom:4,fontSize:13,fontWeight:tab===id?700:400,color:tab===id?'#0d5c3a':'#222',cursor:'pointer'}}>{l}</div>
               ))}
