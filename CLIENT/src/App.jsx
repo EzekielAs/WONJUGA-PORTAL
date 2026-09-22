@@ -3,11 +3,12 @@ import AdminMembers from './AdminMembers'
 import MemberJoin from './MemberJoin'
 
 // ... inside App function, first lines:
+export default function App(){
 const storedUser = JSON.parse(localStorage.getItem('wonjuga_user')||'null')
 if(!storedUser){
   return <MemberJoin/>
 }
-export default function App(){
+
   const [tab,setTab]=useState('dashboard')
   const [menu,setMenu]=useState(false)
   const [pic,setPic]=useState(localStorage.getItem('wonjuga_pic')||null)
