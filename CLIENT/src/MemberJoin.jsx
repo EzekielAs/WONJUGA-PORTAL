@@ -1,60 +1,34 @@
-import { useState } from 'react'
-
-export default function MemberJoin({onSuccess}){
-  const [id,setId]=useState('')
-  const [phone,setPhone]=useState('')
-  const [password,setPassword]=useState('')
-  const [step,setStep]=useState(1) // 1=verify, 2=create password
-  const [foundMember,setFoundMember]=useState(null)
-
-  const verify=()=>{
-    const all=JSON.parse(localStorage.getItem('wonjuga_all_members')||'[]')
-    const member=all.find(m=> m.idNumber.toLowerCase().trim()===id.toLowerCase().trim() && m.phone.trim()===phone.trim())
-    if(!member){
-      alert('❌ Access Denied! Admin has not added you.\n\nYour Staff ID: '+id+' not found.\nContact admin to add you first.')
+export default function MemberJoin(){
+  const verify = () => {
+    const id = document.getElementById('vid').value.toUpperCase()
+    const phone = document.getElementById('vphone').value
+    const all = JSON.parse(localStorage.getItem('wonjuga_all_members') || '[]')
+    
+    // Admin bypass
+    if(id === 'GH/ADMIN' && phone === '0240000000'){
+      localStorage.setItem('wonjuga_user', JSON.stringify({fullName:'Admin', idNumber:'GH/ADMIN', phone}))
+      location.reload()
       return
     }
-    setFoundMember(member)
-    setStep(2)
-  }
 
-  const createAccount=()=>{
-    if(password.length<4) return alert('Password must be 4+ characters')
-    const account={...foundMember,password,joinedDate:new Date().toLocaleDateString()}
-    localStorage.setItem('wonjuga_user',JSON.stringify(account))
-    // update status to Joined
-    const all=JSON.parse(localStorage.getItem('wonjuga_all_members')||'[]')
-    const updated=all.map(m=> m.idNumber===foundMember.idNumber? {...m,status:'Joined'}:m)
-    localStorage.setItem('wonjuga_all_members',JSON.stringify(updated))
-    alert('✅ Welcome '+foundMember.fullName+'! Account created!')
+    const found = all.find(m => m.idNumber.toUpperCase() === id && m.phone === phone)
+    if(!found){
+      alert('❌ Access Denied - Not added by Admin yet')
+      return
+    }
+    localStorage.setItem('wonjuga_user', JSON.stringify(found))
     location.reload()
   }
 
-  return(
-    <div style={{minHeight:'100vh',background:'#f4f5f0',display:'flex',justifyContent:'center',alignItems:'center',padding:16,fontFamily:'system-ui'}}>
-      <div style={{background:'white',padding:24,borderRadius:16,width:'100%',maxWidth:360}}>
-        <h2 style={{color:'#0d5c3a',textAlign:'center'}}>WONJUGA WELFARE</h2>
-        <p style={{fontSize:11,color:'#777',textAlign:'center',marginTop:4}}>{step===1?'Member Verification - Enter your details':'Create Password'}</p>
-
-        {step===1 && (
-          <>
-            <input placeholder="Staff ID e.g GH/12345" value={id} onChange={e=>setId(e.target.value)} style={{width:'100%',padding:12,marginTop:16,borderRadius:10,border:'1px solid #ddd'}}/>
-            <input placeholder="Phone number used by Admin" value={phone} onChange={e=>setPhone(e.target.value)} style={{width:'100%',padding:12,marginTop:10,borderRadius:10,border:'1px solid #ddd'}}/>
-            <button onClick={verify} style={{width:'100%',marginTop:16,background:'#0d5c3a',color:'white',border:'none',padding:12,borderRadius:10,fontWeight:700}}>Verify My Access</button>
-            <p style={{fontSize:10,color:'#999',marginTop:12,textAlign:'center'}}>You must be added by Admin first. If not added, you cannot join.</p>
-          </>
-        )}
-
-        {step===2 && (
-          <>
-            <div style={{background:'#e8f5e9',padding:12,borderRadius:10,marginTop:12}}>
-              <b style={{fontSize:12}}>✅ Verified: {foundMember.fullName}</b><br/>
-              <span style={{fontSize:11}}>{foundMember.idNumber} • {foundMember.rank}</span>
-            </div>
-            <input type="password" placeholder="Create your password" value={password} onChange={e=>setPassword(e.target.value)} style={{width:'100%',padding:12,marginTop:12,borderRadius:10,border:'1px solid #ddd'}}/>
-            <button onClick={createAccount} style={{width:'100%',marginTop:12,background:'#0d5c3a',color:'white',border:'none',padding:12,borderRadius:10,fontWeight:700}}>Create Account & Join</button>
-          </>
-        )}
+  return (
+    <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f5f5f5', padding:20}}>
+      <div style={{background:'white', padding:24, borderRadius:16, width:'100%', maxWidth:400}}>
+        <h2 style={{fontWeight:800, fontSize:20, marginBottom:4}}>WONJUGA Verification</h2>
+        <p style={{fontSize:13, color:'#666', marginBottom:16}}>Enter Staff ID and Phone added by Admin</p>
+        <input id="vid" placeholder="Staff ID e.g. GH/12345" style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc'}} />
+        <input id="vphone" placeholder="Phone e.g. 0241234567" style={{width:'100%', padding:12, marginBottom:12, borderRadius:8, border:'1px solid #ccc'}} />
+        <button onClick={verify} style={{width:'100%', padding:12, background:'#0d5c3a', color:'white', borderRadius:8, border:'none', fontWeight:700}}>Verify & Join</button>
+        <p style={{fontSize:11, color:'#999', marginTop:12}}>Admin Test: GH/ADMIN / 0240000000</p>
       </div>
     </div>
   )
