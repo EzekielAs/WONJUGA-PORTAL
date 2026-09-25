@@ -15,10 +15,13 @@ export default function App(){
   const [claimReason,setClaimReason]=useState("");
   const [claimAmount,setClaimAmount]=useState("");
   const [showNotif,setShowNotif]=useState(false);
+  const [adminService,setAdminService]=useState("");
+  const [adminName,setAdminName]=useState("");
+  const [adminPass,setAdminPass]=useState("");
 
   const [members,setMembers]=useState(()=>{ const s=localStorage.getItem("members"); return s?JSON.parse(s):[{serviceNo:"GH/ADMIN001",name:"Admin - Ezekiel",phone:"0550000001",role:"admin",password:"admin123",totalPaid:0}]; });
   const [contributions,setContributions]=useState(()=>{ const s=localStorage.getItem("contributions"); return s?JSON.parse(s):[]; });
-  const [announcements,setAnnouncements]=useState(()=>{ const s=localStorage.getItem("announcements"); return s?JSON.parse(s):[{id:1,title:"Welcome Intake 28",body:"Welfare portal V4.0 live. Target GHS 500 per member.",date:new Date().toLocaleDateString()}]; });
+  const [announcements,setAnnouncements]=useState(()=>{ const s=localStorage.getItem("announcements"); return s?JSON.parse(s):[{id:1,title:"Welcome Intake 28",body:"Welfare portal V4.1 live. Target GHS 500 per member.",date:new Date().toLocaleDateString()}]; });
   const [claims,setClaims]=useState(()=>{ const s=localStorage.getItem("claims"); return s?JSON.parse(s):[]; });
   const [notifications,setNotifications]=useState(()=>{ const s=localStorage.getItem("notifications"); return s?JSON.parse(s):[{id:1,title:"Welcome!",body:"Your welfare portal is live.",date:new Date().toLocaleString(),read:false,for:"ALL"}]; });
 
@@ -44,8 +47,6 @@ export default function App(){
   const totalPaid=myContribs.reduce((a,b)=>a+Number(b.amount),0);
   const allPaid=contributions.reduce((a,b)=>a+Number(b.amount),0);
   const target=500; const percent=Math.min(100,Math.round((totalPaid/target)*100));
-
-  // notifications for current user
   const myNotifs=notifications.filter(n=>n.for==="ALL" || n.for===user?.serviceNo);
   const unread=myNotifs.filter(n=>!n.read).length;
 
@@ -74,12 +75,11 @@ export default function App(){
   };
 
   if(!user){
-    return (<div className="min-h-screen flex items-center justify-center bg-[#f6f6f3] p-4"><div className="bg-white w-full max-w-[380px] p-8 rounded-[16px] shadow-xl"><h1 className="text-center text-2xl font-bold text-green-800">GIS INTAKE 28</h1><p className="text-center text-[11px] text-gray-500 mb-6">V4.0 + Notifications</p><input value={serviceNo} onChange={e=>setServiceNo(e.target.value)} placeholder="GH/ADMIN001 or IS/..." className="w-full bg-gray-50 border rounded-xl p-3 mb-3 uppercase" /><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password" className="w-full bg-gray-50 border rounded-xl p-3 mb-3" /><button onClick={login} className="w-full bg-green-800 text-white p-3 rounded-xl font-bold">Sign in</button></div></div>);
+    return (<div className="min-h-screen flex items-center justify-center bg-[#f6f6f3] p-4"><div className="bg-white w-full max-w-[380px] p-8 rounded-[16px] shadow-xl"><h1 className="text-center text-2xl font-bold text-green-800">GIS INTAKE 28</h1><p className="text-center text-[11px] text-gray-500 mb-6">V4.1 Add Admin Ready</p><input value={serviceNo} onChange={e=>setServiceNo(e.target.value)} placeholder="GH/ADMIN001 or IS/..." className="w-full bg-gray-50 border rounded-xl p-3 mb-3 uppercase" /><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password" className="w-full bg-gray-50 border rounded-xl p-3 mb-3" /><button onClick={login} className="w-full bg-green-800 text-white p-3 rounded-xl font-bold">Sign in</button></div></div>);
   }
 
   return (
     <div className="min-h-screen bg-[#f6f6f3] pb-20">
-      {/* TOP BAR WITH BELL */}
       <div className="bg-white border-b sticky top-0 z-20">
         <div className="max-w-5xl mx-auto flex justify-between items-center p-3 px-4">
           <p className="font-bold text-green-800">GIS INTAKE 28 • {user.serviceNo}</p>
@@ -88,12 +88,7 @@ export default function App(){
             <button onClick={logout} className="text-sm text-red-500">Logout</button>
           </div>
         </div>
-        {showNotif&&(
-          <div className="max-w-5xl mx-auto p-2"><div className="bg-white border shadow-xl rounded-xl max-h-[350px] overflow-auto">
-            <div className="p-3 border-b flex justify-between"><p className="font-bold">Notifications ({myNotifs.length})</p><button onClick={()=>setNotifications(notifications.map(n=>({...n,read:true})))} className="text-xs text-green-700">Mark all read</button></div>
-            {myNotifs.length===0?<p className="p-4 text-sm text-gray-400">No notifications</p>:myNotifs.map(n=>(<div key={n.id} className={`p-3 border-b text-sm ${!n.read?'bg-yellow-50':''}`}><p className="font-bold">{n.title} <span className="font-normal text-[11px] text-gray-500">{n.date}</span></p><p>{n.body}</p></div>))}
-          </div></div>
-        )}
+        {showNotif&&(<div className="max-w-5xl mx-auto p-2"><div className="bg-white border shadow-xl rounded-xl max-h-[350px] overflow-auto"><div className="p-3 border-b flex justify-between"><p className="font-bold">Notifications ({myNotifs.length})</p><button onClick={()=>setNotifications(notifications.map(n=>({...n,read:true})))} className="text-xs text-green-700">Mark all read</button></div>{myNotifs.length===0?<p className="p-4 text-sm text-gray-400">No notifications</p>:myNotifs.map(n=>(<div key={n.id} className={`p-3 border-b text-sm ${!n.read?'bg-yellow-50':''}`}><p className="font-bold">{n.title} <span className="font-normal text-[11px] text-gray-500">{n.date}</span></p><p>{n.body}</p></div>))}</div></div>)}
       </div>
 
       <div className="flex">
@@ -106,35 +101,68 @@ export default function App(){
           <button onClick={()=>setActiveTab('announcement')} className={`w-full text-left p-3 rounded-lg mb-1 ${activeTab==='announcement'?'bg-green-800 text-white':'hover:bg-gray-100'}`}>Announcement</button>
           <button onClick={()=>setActiveTab('notifications')} className={`w-full text-left p-3 rounded-lg mb-1 flex justify-between ${activeTab==='notifications'?'bg-green-800 text-white':'hover:bg-gray-100'}`}><span>Notifications</span>{unread>0&&<span className="bg-red-600 text-white text-xs px-2 rounded-full">{unread}</span>}</button>
           {user.role==='admin'&&<button onClick={()=>setActiveTab('admin')} className={`w-full text-left p-3 rounded-lg mt-2 ${activeTab==='admin'?'bg-green-800 text-white':'bg-yellow-100'}`}>Admin ({members.length})</button>}
-          <div className="mt-6 text-xs text-gray-500">Total: GHS {allPaid}<br/>Members: {members.length}</div>
+          <div className="mt-6 text-xs text-gray-500">Total: GHS {allPaid}<br/>Members: {members.length} • Admins: {members.filter(m=>m.role==='admin').length}</div>
         </div>
 
         <div className="flex-1 p-4 max-w-5xl mx-auto w-full">
-          {activeTab==='dashboard'&&(
-            <div className="space-y-4">
-              <h1 className="text-2xl font-bold">Good Evening, {user.name.split(" ")[0]}</h1>
-              <div className="bg-white p-4 rounded-xl border shadow-sm"><p className="font-bold">Welfare Journey - {percent}% Complete</p><p className="text-sm text-gray-600">GHS {totalPaid} of {target}</p><div className="w-full bg-gray-200 h-3 rounded-full mt-2"><div className="bg-green-700 h-3 rounded-full" style={{width:`${percent}%`}}></div></div></div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <button onClick={()=>setActiveTab('profile')} className="bg-white border rounded-xl p-4 text-left"><div className="text-2xl">👤</div><p className="font-bold mt-1">Profile</p><p className="text-xs text-gray-500">{user.serviceNo}</p></button>
-                <button onClick={()=>setActiveTab('support')} className="bg-white border rounded-xl p-4 text-left"><div className="text-2xl">🤝</div><p className="font-bold mt-1">Welfare Support</p><p className="text-xs text-gray-500">Benefits</p></button>
-                <button onClick={()=>setActiveTab('claims')} className="bg-green-50 border border-green-200 rounded-xl p-4 text-left"><div className="text-2xl">📝</div><p className="font-bold mt-1">Claims</p><p className="text-xs text-gray-500">{claims.filter(c=>c.serviceNo===user.serviceNo).length} claims</p></button>
-                <button onClick={()=>setActiveTab('contributions')} className="bg-white border rounded-xl p-4 text-left"><div className="text-2xl">💰</div><p className="font-bold mt-1">Contributions</p><p className="text-xs text-gray-500">GHS {totalPaid}</p></button>
-                <button onClick={()=>setActiveTab('announcement')} className="bg-yellow-50 border rounded-xl p-4 text-left"><div className="text-2xl">📢</div><p className="font-bold mt-1">Announcement</p><p className="text-xs text-gray-500">{announcements.length} updates</p></button>
-                <button onClick={()=>setActiveTab('notifications')} className="bg-red-50 border border-red-200 rounded-xl p-4 text-left col-span-2 md:col-span-1"><div className="text-2xl">🔔 {unread>0?`(${unread})`:''}</div><p className="font-bold mt-1">Notifications</p><p className="text-xs text-gray-500">{unread} unread</p></button>
-              </div>
-            </div>
-          )}
-
+          {activeTab==='dashboard'&&(<div className="space-y-4"><h1 className="text-2xl font-bold">Good Evening, {user.name.split(" ")[0]}</h1><div className="bg-white p-4 rounded-xl border shadow-sm"><p className="font-bold">Welfare Journey - {percent}% Complete</p><p className="text-sm text-gray-600">GHS {totalPaid} of {target}</p><div className="w-full bg-gray-200 h-3 rounded-full mt-2"><div className="bg-green-700 h-3 rounded-full" style={{width:`${percent}%`}}></div></div></div><div className="grid grid-cols-2 md:grid-cols-3 gap-3"><button onClick={()=>setActiveTab('profile')} className="bg-white border rounded-xl p-4 text-left"><div className="text-2xl">👤</div><p className="font-bold mt-1">Profile</p><p className="text-xs text-gray-500">{user.serviceNo}</p></button><button onClick={()=>setActiveTab('support')} className="bg-white border rounded-xl p-4 text-left"><div className="text-2xl">🤝</div><p className="font-bold mt-1">Welfare Support</p><p className="text-xs text-gray-500">Benefits</p></button><button onClick={()=>setActiveTab('claims')} className="bg-green-50 border border-green-200 rounded-xl p-4 text-left"><div className="text-2xl">📝</div><p className="font-bold mt-1">Claims</p><p className="text-xs text-gray-500">{claims.filter(c=>c.serviceNo===user.serviceNo).length} claims</p></button><button onClick={()=>setActiveTab('contributions')} className="bg-white border rounded-xl p-4 text-left"><div className="text-2xl">💰</div><p className="font-bold mt-1">Contributions</p><p className="text-xs text-gray-500">GHS {totalPaid}</p></button><button onClick={()=>setActiveTab('announcement')} className="bg-yellow-50 border rounded-xl p-4 text-left"><div className="text-2xl">📢</div><p className="font-bold mt-1">Announcement</p><p className="text-xs text-gray-500">{announcements.length} updates</p></button><button onClick={()=>setActiveTab('notifications')} className="bg-red-50 border border-red-200 rounded-xl p-4 text-left col-span-2 md:col-span-1"><div className="text-2xl">🔔 {unread>0?`(${unread})`:''}</div><p className="font-bold mt-1">Notifications</p><p className="text-xs text-gray-500">{unread} unread</p></button></div></div>)}
           {activeTab==='notifications'&&(<div className="space-y-3"><h3 className="font-bold text-lg">Notifications 🔔</h3><div className="bg-white border rounded-xl"><div className="p-3 border-b flex justify-between"><p className="font-bold">All ({myNotifs.length}) - {unread} unread</p><button onClick={()=>setNotifications([])} className="text-xs text-red-500">Clear all</button></div>{myNotifs.map(n=>(<div key={n.id} className={`p-4 border-b ${!n.read?'bg-yellow-50':''}`}><p className="font-bold text-sm">{n.title}</p><p className="text-sm mt-1">{n.body}</p><p className="text-[11px] text-gray-400 mt-1">{n.date} • To: {n.for}</p></div>))}</div></div>)}
           {activeTab==='profile'&&(<div className="bg-white border rounded-xl p-5"><h3 className="font-bold mb-3 text-lg">Profile</h3><p className="font-bold">{user.name}</p><p className="text-sm">{user.serviceNo} • Paid GHS {totalPaid} ({percent}%)</p><input type="file" accept="image/*" onChange={handlePicUpload} className="mt-4 text-sm" /></div>)}
           {activeTab==='support'&&(<div className="bg-white border rounded-xl p-4"><h3 className="font-bold">Welfare Support</h3><p className="text-sm mt-2">Emergency after 50% • Bereavement after 100% • You: {percent}%</p></div>)}
           {activeTab==='claims'&&(<div className="space-y-3"><div className="bg-white border rounded-xl p-4"><p className="font-bold mb-2">New Claim</p><input value={claimReason} onChange={e=>setClaimReason(e.target.value)} placeholder="Reason" className="w-full border p-2 rounded mb-2"/><input value={claimAmount} onChange={e=>setClaimAmount(e.target.value)} placeholder="Amount" type="number" className="w-full border p-2 rounded mb-2"/><button onClick={()=>{ if(!claimReason||!claimAmount) return alert('Enter reason & amount'); const newClaim={id:Date.now(),serviceNo:user.serviceNo,name:user.name,reason:claimReason,amount:Number(claimAmount),status:"Pending",date:new Date().toLocaleDateString()}; setClaims([newClaim,...claims]); addNotif("Claim Submitted",`Your claim for GHS ${claimAmount} (${claimReason}) is pending`,user.serviceNo); setClaimReason(""); setClaimAmount(""); alert('Claim submitted!'); }} className="w-full bg-green-800 text-white p-2 rounded font-bold">Submit</button></div><div className="bg-white border rounded-xl p-4"><p className="font-bold">My Claims</p>{claims.filter(c=>c.serviceNo===user.serviceNo).map(c=>(<div key={c.id} className="flex justify-between border-b py-2 text-sm"><span>{c.reason} - GHS {c.amount}</span><span className="bg-yellow-100 px-2 rounded text-xs">{c.status}</span></div>))}</div>{user.role==='admin'&&<div className="bg-white border rounded-xl p-4">{claims.map(c=>(<div key={c.id} className="flex justify-between border-b py-2 text-sm"><span>{c.serviceNo} - {c.reason} - GHS {c.amount}</span><div className="flex gap-1"><button onClick={()=>{ setClaims(claims.map(x=>x.id===c.id?{...x,status:'Approved'}:x)); addNotif("Claim Approved!",`Your claim ${c.reason} GHS ${c.amount} Approved`,c.serviceNo); }} className="bg-green-700 text-white px-2 rounded text-xs">Approve</button><button onClick={()=>{ setClaims(claims.map(x=>x.id===c.id?{...x,status:'Rejected'}:x)); addNotif("Claim Update",`Your claim ${c.reason} was Rejected`,c.serviceNo); }} className="bg-red-500 text-white px-2 rounded text-xs">Reject</button></div></div>))}</div>}</div>)}
           {activeTab==='contributions'&&(<div className="bg-white border rounded-xl p-4"><h3 className="font-bold mb-2">Contributions GHS {totalPaid}</h3>{myContribs.map((c,i)=>(<div key={i} className="flex justify-between border-b py-2 text-sm"><span>{c.month} • {c.date}</span><span className="font-bold">GHS {c.amount}</span></div>))}</div>)}
           {activeTab==='announcement'&&(<div className="space-y-3"><h3 className="font-bold text-lg">Announcement</h3>{user.role==='admin'&&<div className="bg-white border rounded-xl p-4"><input value={annTitle} onChange={e=>setAnnTitle(e.target.value)} placeholder="Title" className="w-full border p-2 rounded mb-2"/><textarea value={annBody} onChange={e=>setAnnBody(e.target.value)} placeholder="Message..." className="w-full border p-2 rounded mb-2" rows="3"></textarea><button onClick={()=>{ if(!annTitle||!annBody) return alert('Enter title & message'); const newA={id:Date.now(),title:annTitle,body:annBody,date:new Date().toLocaleDateString()}; setAnnouncements([newA,...announcements]); addNotif(`📢 ${annTitle}`,annBody,"ALL"); setAnnTitle(""); setAnnBody(""); alert('Posted + Notified ALL!'); }} className="w-full bg-green-800 text-white p-2 rounded font-bold">Post + Notify All</button></div>}<div className="bg-white border rounded-xl p-4">{announcements.map(a=>(<div key={a.id} className="border-b py-3"><p className="font-bold text-sm">{a.title} <span className="text-xs text-gray-500">{a.date}</span></p><p className="text-sm mt-1">{a.body}</p></div>))}</div></div>)}
+
           {activeTab==='admin'&&user.role==='admin'&&(
             <div className="space-y-4">
-              <div className="bg-white border rounded-xl p-4"><h3 className="font-bold text-green-800 mb-2">BULK IMPORT</h3><input type="file" accept=".csv,.txt" onChange={handleBulkImport} className="w-full border p-2 rounded bg-gray-50" /></div>
-              <div className="bg-white border rounded-xl p-4"><h3 className="font-bold mb-3">Add Payment (Triggers Notification)</h3><div className="grid grid-cols-2 gap-2"><input value={addService} onChange={e=>setAddService(e.target.value)} placeholder="IS/13984" className="border p-2 rounded uppercase" /><input value={addAmount} onChange={e=>setAddAmount(e.target.value)} placeholder="50" type="number" className="border p-2 rounded" /><input value={addMonth} onChange={e=>setAddMonth(e.target.value)} placeholder="May 2026" className="border p-2 rounded col-span-2" /><button onClick={()=>{ if(!addService||!addAmount) return alert('Enter service and amount'); const sn=addService.toUpperCase().trim(); const newC={serviceNo:sn,amount:Number(addAmount),month:addMonth,date:new Date().toLocaleDateString()}; setContributions([...contributions,newC]); addNotif("Payment Received! 💰",`GHS ${addAmount} credited for ${addMonth}. Thank you!`,sn); setAddService(""); setAddAmount(""); alert(`Added + Notified ${sn}`); }} className="bg-green-800 text-white rounded p-2 col-span-2 font-bold">Add + Notify Member</button></div></div>
+              <div className="bg-white border rounded-xl p-4 border-l-4 border-l-black">
+                <h3 className="font-bold text-black mb-2">👑 ADD NEW ADMIN</h3>
+                <div className="grid grid-cols-1 gap-2">
+                  <input value={adminService} onChange={e=>setAdminService(e.target.value)} placeholder="GH/ADMIN002" className="border p-2 rounded uppercase" />
+                  <input value={adminName} onChange={e=>setAdminName(e.target.value)} placeholder="Full Name e.g. John Mensah" className="border p-2 rounded" />
+                  <input value={adminPass} onChange={e=>setAdminPass(e.target.value)} placeholder="Password e.g. admin002" className="border p-2 rounded" />
+                  <button onClick={()=>{
+                    if(!adminService||!adminName||!adminPass) return alert('Fill all 3 fields');
+                    const sn=adminService.toUpperCase().trim();
+                    if(members.find(m=>m.serviceNo===sn)) return alert('Already exists! Use different Service No');
+                    const newAdmin={serviceNo:sn,name:adminName,phone:"",role:"admin",password:adminPass,totalPaid:0};
+                    setMembers([...members,newAdmin]);
+                    addNotif("New Admin Added",`${adminName} (${sn}) is now admin`,"ALL");
+                    setAdminService(""); setAdminName(""); setAdminPass("");
+                    alert(`${sn} added as ADMIN! Login: ${sn} / ${adminPass}`);
+                  }} className="bg-black text-white rounded p-3 font-bold">+ Make Admin</button>
+                </div>
+              </div>
+
+              <div className="bg-white border rounded-xl p-4">
+                <h3 className="font-bold text-green-800 mb-2">BULK IMPORT MEMBERS</h3>
+                <input type="file" accept=".csv,.txt" onChange={handleBulkImport} className="w-full border p-2 rounded bg-gray-50" />
+              </div>
+
+              <div className="bg-white border rounded-xl p-4">
+                <h3 className="font-bold mb-3">Add Payment (Triggers Notification)</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={addService} onChange={e=>setAddService(e.target.value)} placeholder="IS/13984" className="border p-2 rounded uppercase" />
+                  <input value={addAmount} onChange={e=>setAddAmount(e.target.value)} placeholder="50" type="number" className="border p-2 rounded" />
+                  <input value={addMonth} onChange={e=>setAddMonth(e.target.value)} placeholder="May 2026" className="border p-2 rounded col-span-2" />
+                  <button onClick={()=>{ if(!addService||!addAmount) return alert('Enter service and amount'); const sn=addService.toUpperCase().trim(); const newC={serviceNo:sn,amount:Number(addAmount),month:addMonth,date:new Date().toLocaleDateString()}; setContributions([...contributions,newC]); addNotif("Payment Received! 💰",`GHS ${addAmount} credited for ${addMonth}. Thank you!`,sn); setAddService(""); setAddAmount(""); alert(`Added + Notified ${sn}`); }} className="bg-green-800 text-white rounded p-2 col-span-2 font-bold">Add + Notify Member</button>
+                </div>
+              </div>
+
+              <div className="bg-white border rounded-xl p-4">
+                <h3 className="font-bold mb-2">All Members ({members.length}) - Admins: {members.filter(m=>m.role==='admin').length}</h3>
+                <div className="max-h-[400px] overflow-auto text-sm">
+                  {members.map((m,i)=>(
+                    <div key={i} className="flex justify-between border-b py-2 items-center">
+                      <span>{m.serviceNo} - {m.name} <span className={`text-[10px] px-1 rounded ${m.role==='admin'?'bg-black text-white':'bg-gray-200'}`}>{m.role}</span></span>
+                      <div className="flex gap-1">
+                        {m.role!=='admin'&&<button onClick={()=>{ setMembers(members.map(x=>x.serviceNo===m.serviceNo?{...x,role:'admin'}:x)); alert(`${m.serviceNo} promoted to admin`) }} className="bg-black text-white px-2 py-1 rounded text-[10px]">Make Admin</button>}
+                        <span className="text-gray-500">GHS {contributions.filter(c=>c.serviceNo===m.serviceNo).reduce((a,b)=>a+Number(b.amount),0)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
