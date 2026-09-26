@@ -18,7 +18,7 @@ function App() {
   const [contributions, setContributions] = useState([])
   const [requests, setRequests] = useState([])
   const [notifications, setNotifications] = useState([])
-  const [form, setForm] = useState({name:'', phone:'', reason:''})
+ const [form, setForm] = useState({name:'', phone:'', serviceNo:''})
 
   useEffect(()=>{
     onSnapshot(collection(db, "contributions"), s=>setContributions(s.docs.map(d=>d.data())))
@@ -116,7 +116,7 @@ function App() {
             <p>New member? Request to join GIS WONJUGA WELFARE</p>
             <input placeholder="Full Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
             <input placeholder="Phone Number" value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
-            <textarea placeholder="Reason to join / Welfare need" value={form.reason} onChange={e=>setForm({...form, reason:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', minHeight:80, boxSizing:'border-box'}}/>
+           <input placeholder="Service Number e.g. GIS 12345" value={form.serviceNo} onChange={e=>setForm({...form, serviceNo:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
             <button onClick={submitAccess} style={{width:'100%', padding:14, background:'#0b6e4f', color:'white', border:'none', borderRadius:8, fontWeight:'bold'}}>SUBMIT REQUEST</button>
           </div>
         </div>
