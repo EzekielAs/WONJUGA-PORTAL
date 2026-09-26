@@ -67,9 +67,14 @@ function App() {
   }
 
   const approveRequest = async (req)=>{
-      const rejectRequest = async (req)=>{
-    if(!confirm(`Reject ${req.name} ?`)) return
-    await updateDoc(doc(db, "welfareRequests", req.id), {status: 'Rejected'})
+     const rejectRequest = async (req)=>{
+    if(!confirm(`Reject ${req.name} ? This will DELETE the request.`)) return
+    try{
+      await deleteDoc(doc(db, "welfareRequests", req.id))
+      alert(`✅ ${req.name} DELETED!`)
+    } catch(e){
+      alert("Error: " + e.message + " - Fix Firestore Rules!")
+    }
   }
     await updateDoc(doc(db, "welfareRequests", req.id), {status: 'Approved'})
     await addDoc(collection(db, "contributions"), {name: req.name, phone: req.phone, serviceNo: req.serviceNo, amount: 0, date: new Date().toLocaleDateString()})
