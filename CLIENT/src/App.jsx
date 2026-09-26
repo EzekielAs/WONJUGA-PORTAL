@@ -3,7 +3,6 @@ import { initializeApp } from 'firebase/app'
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore'
 
 const firebaseConfig = {
-const firebaseConfig = {
   apiKey: "AIzaSyCqBe_TY3I4istScWiohcM1r4LQfEY2a7g",
   authDomain: "wonjuga-portal.firebaseapp.com",
   projectId: "wonjuga-portal",
@@ -11,7 +10,6 @@ const firebaseConfig = {
   messagingSenderId: "1081629612681",
   appId: "1:1081629612681:web:ec07a5c82da1eb3f4a1f26"
 };
- 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
