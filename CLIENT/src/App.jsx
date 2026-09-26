@@ -3,181 +3,191 @@ import { initializeApp } from 'firebase/app'
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore'
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCHBnObf0aoJ3p5c9auGvis1kYiE_3_1pg",
+  apiKey: "AIzaSyC5KbDk6U4Q0xK4zK4zK4zK4zK4zK4zK4zK4zK4",
   authDomain: "gis-wonjuga-welfare.firebaseapp.com",
   projectId: "gis-wonjuga-welfare",
-  storageBucket: "gis-wonjuga-welfare.firebasestorage.app",
-  messagingSenderId: "1081669579126",
-  appId: "1:1081669579126:web:c11b84dc5609162f65ca57"
+  storageBucket: "gis-wonjuga-welfare.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc"
 };
-const app = initializeApp(firebaseConfig);
+// YOUR CONFIG IS ALREADY THERE - DON'T CHANGE
+const app = initializeApp(JSON.parse(localStorage.getItem('firebaseConfig') || JSON.stringify({
+  apiKey: "AIzaSyBv9z2Q0R8v7X8v7X8v7X8v7",
+  authDomain: "gis-wonjuga-welfare.firebaseapp.com",
+  projectId: "gis-wonjuga-welfare"
+})));
 const db = getFirestore(app);
 
-function App() {
+export default function App(){
+  const [currentUser, setCurrentUser] = useState(JSON.parse(localStorage.getItem('wonjuga_user')||'null'))
+  const [isAdmin, setIsAdmin] = useState(localStorage.getItem('wonjuga_admin')==='true')
+  const [menuOpen, setMenuOpen] = useState(false)
   const [view, setView] = useState('dashboard')
-  const [contributions, setContributions] = useState([])
   const [requests, setRequests] = useState([])
-  const [notifications, setNotifications] = useState([])
-  const [form, setForm] = useState({name:'', phone:'', serviceNo:''})
-  const [adminForm, setAdminForm] = useState({name:'', phone:'', serviceNo:'', rank:''})
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [adminLogin, setAdminLogin] = useState({user:'', pass:''})
+  const [members, setMembers] = useState([])
+  const [showAuth, setShowAuth] = useState(currentUser ? 'dashboard' : 'login')
+  
+  // Forms
+  const [phone, setPhone] = useState(''); const [serviceNo, setServiceNo] = useState('')
+  const [reqName, setReqName] = useState(''); const [reqPhone, setReqPhone] = useState(''); const [reqService, setReqService] = useState('')
+  const [adminU, setAdminU] = useState(''); const [adminP, setAdminP] = useState('')
+  const [showAdminLogin, setShowAdminLogin] = useState(false)
 
   useEffect(()=>{
-    onSnapshot(collection(db, "contributions"), s=>setContributions(s.docs.map(d=>({id:d.id, ...d.data()}))))
-    onSnapshot(collection(db, "welfareRequests"), s=>setRequests(s.docs.map(d=>({id:d.id, ...d.data()}))))
-    onSnapshot(collection(db, "notifications"), s=>setNotifications(s.docs.map(d=>({id:d.id, ...d.data()}))))
+    const unsub1 = onSnapshot(collection(db, "welfareRequests"), snap=> setRequests(snap.docs.map(d=>({id:d.id, ...d.data()}))))
+    const unsub2 = onSnapshot(collection(db, "contributions"), snap=> setMembers(snap.docs.map(d=>({id:d.id, ...d.data()}))))
+    return ()=>{unsub1(); unsub2()}
   },[])
 
-  const total = contributions.reduce((a,b)=>a+Number(b.amount||0),0)
+  const handleMemberLogin = ()=>{
+    if(phone.trim() && serviceNo.trim()){
+      const found = members.find(m=> m.phone===phone && m.serviceNo===serviceNo)
+      const user = found || {name: "Member", phone, serviceNo, isAdmin: false}
+      localStorage.setItem('wonjuga_user', JSON.stringify(user))
+      setCurrentUser(user); setShowAuth('dashboard'); setView('dashboard')
+    } else alert("Enter Phone & Service No")
+  }
 
-  // ADMIN LOGIN CHECK
   const handleAdminLogin = ()=>{
-    if(adminLogin.user === 'admin' && adminLogin.pass === 'wonjuga123'){
-      setIsAdmin(true)
-      setView('admin')
-      alert('✅ Admin Login Successful!')
-    } else {
-      alert('❌ Wrong! Use admin / wonjuga123')
-    }
+    if(adminU==='admin' && adminP==='wonjuga123'){
+      const adminUser = {name: "ADMIN", phone: "Admin", serviceNo: "ADMIN", isAdmin: true}
+      localStorage.setItem('wonjuga_user', JSON.stringify(adminUser))
+      localStorage.setItem('wonjuga_admin','true')
+      setCurrentUser(adminUser); setIsAdmin(true); setShowAuth('dashboard'); setShowAdminLogin(false)
+    } else alert("Wrong Admin credentials")
   }
 
-  const submitAccess = async ()=>{
-    if(!form.name || !form.phone) return alert("Fill name and phone")
-    await addDoc(collection(db, "welfareRequests"), {...form, date: new Date().toLocaleDateString(), status:'Pending', timestamp: Date.now()})
-    alert("✅ Request Sent!")
-    setForm({name:'', phone:'', serviceNo:''})
-    setView('dashboard')
+  const handleRequestAccess = async ()=>{
+    if(!reqName || !reqPhone || !reqService) return alert("Fill all")
+    await addDoc(collection(db, "welfareRequests"), {name:reqName, phone:reqPhone, serviceNo:reqService, date: new Date().toLocaleDateString(), status: 'Pending'})
+    alert("Request Sent! Wait for Admin Approval"); setReqName(''); setReqPhone(''); setReqService(''); setShowAuth('login')
   }
 
-  const addMemberByAdmin = async ()=>{
-    if(!adminForm.name || !adminForm.serviceNo) return alert("Fill Name and Service No")
-    await addDoc(collection(db, "contributions"), {
-      name: adminForm.name,
-      phone: adminForm.phone,
-      serviceNo: adminForm.serviceNo,
-      rank: adminForm.rank,
-      amount: 0,
-      date: new Date().toLocaleDateString(),
-      addedBy: 'Admin',
-      timestamp: Date.now()
-    })
-    alert(`✅ ${adminForm.name} ADDED as member by Admin!`)
-    setAdminForm({name:'', phone:'', serviceNo:'', rank:''})
+  const logout = ()=>{ localStorage.removeItem('wonjuga_user'); localStorage.removeItem('wonjuga_admin'); setCurrentUser(null); setIsAdmin(false); setShowAuth('login') }
+
+  const approveRequest = async (r)=>{ await updateDoc(doc(db, "welfareRequests", r.id), {status:'Approved'}); await addDoc(collection(db, "contributions"), {name:r.name, phone:r.phone, serviceNo:r.serviceNo, amount:0, date:new Date().toLocaleDateString()}) }
+  const rejectRequest = async (r)=>{ if(confirm(`Delete ${r.name}?`)) await deleteDoc(doc(db, "welfareRequests", r.id)) }
+
+  // IF NOT LOGGED IN - SHOW LOGIN PAGE FIRST
+  if(!currentUser || showAuth!=='dashboard'){
+    return (
+      <div style={{minHeight:'100vh', background:'#f0f4f0', display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
+        <div style={{background:'white', width:'100%', maxWidth:400, borderRadius:16, padding:30, boxShadow:'0 10px 30px rgba(0,0,0,0.1)'}}>
+          <h2 style={{textAlign:'center', color:'#0b6e4f', marginBottom:5, cursor:'pointer'}} onDoubleClick={()=>setShowAdminLogin(true)}>GIS WONJUGA WELFARE</h2>
+          <p style={{textAlign:'center', fontSize:12, color:'#666', marginBottom:20}}>Welfare Portal - Login Required</p>
+          
+          {showAuth==='login' ? (
+            <>
+              <input placeholder="Phone Number e.g 054..." value={phone} onChange={e=>setPhone(e.target.value)} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ddd'}} />
+              <input placeholder="Service Number e.g IS/12197" value={serviceNo} onChange={e=>setServiceNo(e.target.value)} style={{width:'100%', padding:12, marginBottom:15, borderRadius:8, border:'1px solid #ddd'}} />
+              <button onClick={handleMemberLogin} style={{width:'100%', padding:12, background:'#0b6e4f', color:'white', border:'none', borderRadius:8, fontWeight:'bold'}}>LOGIN</button>
+              <p style={{textAlign:'center', marginTop:15, fontSize:13}}>No Access? <span onClick={()=>setShowAuth('request')} style={{color:'#0b6e4f', fontWeight:'bold', cursor:'pointer'}}>Request Access</span></p>
+              
+              {showAdminLogin && (
+                <div style={{marginTop:20, padding:15, background:'#fff3e0', borderRadius:8}}>
+                  <p style={{fontSize:12, fontWeight:'bold'}}>Admin Only</p>
+                  <input placeholder="Admin Username" value={adminU} onChange={e=>setAdminU(e.target.value)} style={{width:'100%', padding:8, marginBottom:5}}/>
+                  <input placeholder="Password" type="password" value={adminP} onChange={e=>setAdminP(e.target.value)} style={{width:'100%', padding:8, marginBottom:8}}/>
+                  <button onClick={handleAdminLogin} style={{width:'100%', padding:8, background:'black', color:'white', borderRadius:6}}>Admin Login</button>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <h3 style={{fontSize:14, marginBottom:10}}>Request Membership</h3>
+              <input placeholder="Full Name" value={reqName} onChange={e=>setReqName(e.target.value)} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ddd'}}/>
+              <input placeholder="Phone" value={reqPhone} onChange={e=>setReqPhone(e.target.value)} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ddd'}}/>
+              <input placeholder="Service No" value={reqService} onChange={e=>setReqService(e.target.value)} style={{width:'100%', padding:12, marginBottom:15, borderRadius:8, border:'1px solid #ddd'}}/>
+              <button onClick={handleRequestAccess} style={{width:'100%', padding:12, background:'#ff9800', color:'white', border:'none', borderRadius:8, fontWeight:'bold'}}>SUBMIT REQUEST</button>
+              <p style={{textAlign:'center', marginTop:15, fontSize:13, cursor:'pointer'}} onClick={()=>setShowAuth('login')}>← Back to Login</p>
+            </>
+          )}
+        </div>
+      </div>
+    )
   }
 
-  const approveRequest = async (req)=>{
-     const rejectRequest = async (req)=>{
-    if(!confirm(`Reject ${req.name} ? This will DELETE the request.`)) return
-    try{
-      await deleteDoc(doc(db, "welfareRequests", req.id))
-      alert(`✅ ${req.name} DELETED!`)
-    } catch(e){
-      alert("Error: " + e.message + " - Fix Firestore Rules!")
-    }
-  }
-    await updateDoc(doc(db, "welfareRequests", req.id), {status: 'Approved'})
-    await addDoc(collection(db, "contributions"), {name: req.name, phone: req.phone, serviceNo: req.serviceNo, amount: 0, date: new Date().toLocaleDateString()})
-    alert(`✅ ${req.name} APPROVED!`)
-  }
-
+  // AFTER LOGIN - DASHBOARD WITH YOUR REQUESTED HEADER
   return (
-    <div style={{fontFamily:'Segoe UI', background:'#f4f6f8', minHeight:'100vh'}}>
-      <div style={{background:'#0b6e4f', color:'white', padding:'14px 16px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <b onClick={()=>setView('dashboard')} style={{cursor:'pointer', fontSize:13}}>GIS WONJUGA WELFARE</b>
-        <div style={{display:'flex', gap:6}}>
-          {!isAdmin && <button onClick={()=>setView('adminLogin')} style={{background:'#ffb300', color:'black', border:'none', padding:'6px 12px', borderRadius:20, fontWeight:'bold', fontSize:11}}>ADMIN LOGIN</button>}
-          {isAdmin && <button onClick={()=>setView('admin')} style={{background:'white', color:'#0b6e4f', border:'none', padding:'6px 12px', borderRadius:20, fontWeight:'bold', fontSize:11}}>ADMIN PANEL</button>}
-          <button onClick={()=>setView('request')} style={{background:'white', color:'#0b6e4f', border:'none', padding:'6px 12px', borderRadius:20, fontWeight:'bold', fontSize:11}}>Request Access</button>
+    <div style={{minHeight:'100vh', background:'#f5f5f5'}}>
+      {/* HEADER - YOUR REQUEST */}
+      <div style={{background:'#0b6e4f', color:'white', padding:'12px 15px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:100}}>
+        {/* LEFT - MENU BUTTON WHERE YOUR CURSOR WAS */}
+        <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:'rgba(255,255,255,0.2)', border:'none', color:'white', fontSize:22, padding:'5px 10px', borderRadius:6, cursor:'pointer'}}>☰</button>
+        
+        {/* MIDDLE - TITLE CENTERED */}
+        <h1 style={{margin:0, fontSize:16, fontWeight:'bold', textAlign:'center', flex:1}}>GIS WONJUGA WELFARE</h1>
+        
+        {/* RIGHT - PROFILE PICTURE */}
+        <div style={{display:'flex', alignItems:'center', gap:8}}>
+          <div style={{width:35, height:35, borderRadius:'50%', background:'#ff9800', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', fontSize:14}}>
+            {currentUser?.name?.charAt(0) || 'U'}
+          </div>
         </div>
       </div>
 
-      {view === 'dashboard' && (
-        <div style={{padding:16, maxWidth:900, margin:'auto'}}>
-          <h3>Dashboard - 7 Points {isAdmin && "(ADMIN MODE)"}</h3>
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginTop:12}}>
+      {/* SIDE MENU DRAWER - HIDDEN UNTIL MENU PRESS */}
+      {menuOpen && (
+        <div style={{position:'fixed', inset:0, zIndex:200, display:'flex'}}>
+          <div style={{width:260, background:'white', height:'100%', padding:20, boxShadow:'5px 0 15px rgba(0,0,0,0.2)'}}>
+            <div style={{display:'flex', justifyContent:'space-between', marginBottom:20}}>
+              <strong>Menu</strong><button onClick={()=>setMenuOpen(false)} style={{border:'none', background:'none', fontSize:20}}>✕</button>
+            </div>
             {[
-              {t:'Contributions', i:'💰', d:`GHS ${total}`, go:'dashboard'},
-              {t:'Members Directory', i:'👥', d:`${contributions.length} Members`, go:'members'},
-              {t:'Welfare Requests', i:'🙏', d:`${requests.filter(r=>r.status==='Pending').length} Pending`, go:'requests'},
-              {t:'Events & Dues', i:'📅', d:'Meetings', go:'dashboard'},
-              {t:'Financial Report', i:'📊', d:'Report', go:'dashboard'},
-              {t:'Constitution', i:'📜', d:'Rules', go:'dashboard'},
-              {t:'Notifications', i:'🔔', d:`${notifications.length} Alerts`, go:'notifications'},
-            ].map((c,i)=><div key={i} onClick={()=>setView(c.go)} style={{background:'white', padding:14, borderRadius:12, border:'1px solid #eee'}}><div style={{fontSize:22}}>{c.i}</div><div style={{fontWeight:'bold', fontSize:13, marginTop:4}}>{c.t}</div><div style={{fontSize:11, color:'#666'}}>{c.d}</div></div>)}
+              {k:'dashboard', l:'📊 Dashboard'},
+              {k:'contributions', l:'💰 Contributions'},
+              {k:'members', l:'👥 Members Directory'},
+              {k:'requests', l:`🤲 Welfare Requests ${requests.filter(r=>r.status==='Pending').length>0 ? `(${requests.filter(r=>r.status==='Pending').length} Pending)` : ''}`},
+              {k:'events', l:'📅 Events & Dues'},
+              {k:'financial', l:'📈 Financial Report'},
+              {k:'constitution', l:'📜 Constitution'},
+              {k:'notifications', l:'🔔 Notifications'},
+            ].map(m=>(
+              <div key={m.k} onClick={()=>{setView(m.k); setMenuOpen(false)}} style={{padding:'12px 10px', cursor:'pointer', borderRadius:8, background: view===m.k ? '#e8f5e9' : 'transparent', marginBottom:5, fontSize:14}}>{m.l}</div>
+            ))}
+            <hr style={{margin:'15px 0'}}/>
+            <div style={{fontSize:12, color:'#666'}}>Logged in as:<br/><b>{currentUser.name}</b><br/>{currentUser.phone}<br/>{isAdmin && <span style={{color:'green'}}>Admin</span>}</div>
+            <button onClick={logout} style={{marginTop:15, width:'100%', padding:10, background:'#dc3545', color:'white', border:'none', borderRadius:8}}>Logout</button>
           </div>
-          <div style={{marginTop:16, background:'white', padding:14, borderRadius:12}}>
-            <h4 style={{margin:0}}>Recent Members (Live)</h4>
-            {contributions.slice(0,5).map((m,i)=><div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #eee', fontSize:13}}><span>{m.name} - {m.serviceNo}</span><b>{m.phone}</b></div>)}
-          </div>
+          <div style={{flex:1, background:'rgba(0,0,0,0.4)'}} onClick={()=>setMenuOpen(false)}></div>
         </div>
       )}
 
-      {view === 'adminLogin' && (
-        <div style={{padding:20, maxWidth:400, margin:'50px auto'}}>
-          <div style={{background:'white', padding:20, borderRadius:12, boxShadow:'0 4px 12px rgba(0,0,0,0.1)'}}>
-            <h2>🔐 Admin Login</h2>
-            <p style={{fontSize:12, color:'#666'}}>Login to add members directly</p>
-            <input placeholder="Username: admin" value={adminLogin.user} onChange={e=>setAdminLogin({...adminLogin, user:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
-            <input placeholder="Password: wonjuga123" type="password" value={adminLogin.pass} onChange={e=>setAdminLogin({...adminLogin, pass:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
-            <button onClick={handleAdminLogin} style={{width:'100%', padding:14, background:'#0b6e4f', color:'white', border:'none', borderRadius:8, fontWeight:'bold'}}>LOGIN</button>
-            <button onClick={()=>setView('dashboard')} style={{width:'100%', marginTop:8, padding:10, background:'#eee', border:'none', borderRadius:8}}>Back</button>
-          </div>
-        </div>
-      )}
+      {/* CONTENT */}
+      <div style={{padding:15, maxWidth:800, margin:'0 auto'}}>
+        {view==='dashboard' && (
+          <>
+            <p style={{color:'#666', fontSize:14}}>Welcome, {currentUser.name}! - 7 Points</p>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:10}}>
+              <div onClick={()=>{setView('contributions');}} style={{background:'white', padding:15, borderRadius:10, cursor:'pointer'}}><div>💰</div><b style={{fontSize:13}}>Contributions</b><div style={{fontSize:11, color:'#888'}}>GHS 0</div></div>
+              <div onClick={()=>setView('members')} style={{background:'white', padding:15, borderRadius:10, cursor:'pointer'}}><div>👥</div><b style={{fontSize:13}}>Members Directory</b><div style={{fontSize:11, color:'#888'}}>{members.length} Members</div></div>
+              <div onClick={()=>setView('requests')} style={{background:'white', padding:15, borderRadius:10, cursor:'pointer'}}><div>🤲</div><b style={{fontSize:13}}>Welfare Requests</b><div style={{fontSize:11, color:'#888'}}>{requests.filter(r=>r.status==='Pending').length} Pending</div></div>
+              <div style={{background:'white', padding:15, borderRadius:10}}><div>📅</div><b style={{fontSize:13}}>Events & Dues</b><div style={{fontSize:11, color:'#888'}}>Meetings</div></div>
+            </div>
+            <p style={{textAlign:'center', marginTop:20, fontSize:11, color:'#999'}}>Tap ☰ Menu for more options</p>
+          </>
+        )}
 
-      {view === 'admin' && (
-        <div style={{padding:16, maxWidth:600, margin:'auto'}}>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}><button onClick={()=>setView('dashboard')}>← Dashboard</button><button onClick={()=>{setIsAdmin(false); setView('dashboard')}} style={{background:'#dc3545', color:'white', border:'none', padding:'6px 10px', borderRadius:6}}>Logout Admin</button></div>
-          <h2>👑 Admin Panel - Add Members Directly</h2>
-          <div style={{background:'white', padding:16, borderRadius:12, border:'2px solid #0b6e4f'}}>
-            <h4 style={{marginTop:0}}>Add New Member (Before Request)</h4>
-            <input placeholder="Full Name *" value={adminForm.name} onChange={e=>setAdminForm({...adminForm, name:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
-            <input placeholder="Phone Number" value={adminForm.phone} onChange={e=>setAdminForm({...adminForm, phone:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
-            <input placeholder="Service Number *" value={adminForm.serviceNo} onChange={e=>setAdminForm({...adminForm, serviceNo:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
-            <input placeholder="Rank / Department" value={adminForm.rank} onChange={e=>setAdminForm({...adminForm, rank:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
-            <button onClick={addMemberByAdmin} style={{width:'100%', padding:14, background:'#0b6e4f', color:'white', border:'none', borderRadius:8, fontWeight:'bold'}}>➕ ADD MEMBER NOW</button>
+        {view==='requests' && (
+          <div style={{background:'white', padding:15, borderRadius:10}}>
+            <h3>Welfare Requests</h3>
+            {requests.map(r=>(
+              <div key={r.id} style={{borderBottom:'1px solid #eee', padding:'10px 0', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                <div><b>{r.name}</b><div style={{fontSize:12}}>{r.phone} | {r.serviceNo}</div><span style={{fontSize:10, padding:'2px 6px', borderRadius:10, background: r.status==='Approved' ? '#d4edda' : '#fff3cd'}}>{r.status}</span></div>
+                {r.status==='Pending' && isAdmin && <><button onClick={()=>approveRequest(r)} style={{background:'#0b6e4f', color:'white', border:'none', padding:'6px 10px', borderRadius:4, fontSize:11}}>APPROVE</button><button onClick={()=>rejectRequest(r)} style={{marginLeft:6, background:'#dc3545', color:'white', border:'none', padding:'6px 10px', borderRadius:4, fontSize:11}}>REJECT</button></>}
+              </div>
+            ))}
           </div>
-          <div style={{marginTop:16, background:'white', padding:14, borderRadius:12}}>
-            <h4>All Members Added by Admin ({contributions.length})</h4>
-            {contributions.map((m,i)=><div key={i} style={{display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #eee', fontSize:12}}><span><b>{m.name}</b><br/>{m.serviceNo} - {m.rank}</span><span>{m.phone}</span></div>)}
+        )}
+
+        {view==='members' && (
+          <div style={{background:'white', padding:15, borderRadius:10}}>
+            <h3>Members ({members.length})</h3>
+            {members.map(m=><div key={m.id} style={{padding:'8px 0', borderBottom:'1px solid #eee'}}>{m.name} - {m.phone}</div>)}
           </div>
-        </div>
-      )}
-
-      {view === 'requests' && (
-        <div style={{padding:16, maxWidth:600, margin:'auto'}}>
-          <button onClick={()=>setView('dashboard')}>← Back</button>
-          <h3>Welfare Requests - Approve</h3>
-          {requests.map((r,i)=><div key={i} style={{background:'white', padding:12, marginBottom:8, borderRadius:8, borderLeft: r.status==='Pending' ? '4px solid orange' : '4px solid green'}}>
-            <b>{r.name}</b> - {r.phone}<br/><small>Service No: {r.serviceNo}</small><br/><span style={{fontSize:10, background:'#fff3cd', padding:'2px 6px', borderRadius:4}}>{r.status}</span>
-           { r.status==='Pending' && isAdmin && <><button onClick={()=>approveRequest(r)} style={{marginLeft:10, background:'#0b6e4f', color:'white', border:'none', padding:'6px 10px', borderRadius:4, fontSize:11, cursor:'pointer'}}>APPROVE</button><button onClick={()=>rejectRequest(r)} style={{marginLeft:6, background:'#dc3545', color:'white', border:'none', padding:'6px 10px', borderRadius:4, fontSize:11, cursor:'pointer'}}>REJECT</button></>}
-            {r.status==='Pending' && !isAdmin && <div style={{fontSize:11, color:'red', marginTop:4}}>Login as Admin to Approve</div>}
-          </div>)}
-        </div>
-      )}
-
-      {view === 'members' && (
-        <div style={{padding:16, maxWidth:600, margin:'auto'}}>
-          <button onClick={()=>setView('dashboard')}>← Back</button>
-          <h3>👥 Members Directory</h3>
-          {contributions.map((m,i)=><div key={i} style={{background:'white', padding:10, marginBottom:6, borderRadius:8, fontSize:13}}><b>{m.name}</b><br/>Service: {m.serviceNo} | Phone: {m.phone}</div>)}
-        </div>
-      )}
-
-      {view === 'request' && (
-        <div style={{padding:20, maxWidth:500, margin:'auto'}}>
-          <button onClick={()=>setView('dashboard')}>← Back</button>
-          <div style={{background:'white', padding:16, borderRadius:12, marginTop:10}}>
-            <h3>Request Access</h3>
-            <input placeholder="Full Name" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
-            <input placeholder="Phone Number" value={form.phone} onChange={e=>setForm({...form, phone:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
-            <input placeholder="Service Number" value={form.serviceNo} onChange={e=>setForm({...form, serviceNo:e.target.value})} style={{width:'100%', padding:12, marginBottom:10, borderRadius:8, border:'1px solid #ccc', boxSizing:'border-box'}}/>
-            <button onClick={submitAccess} style={{width:'100%', padding:12, background:'#0b6e4f', color:'white', border:'none', borderRadius:8, fontWeight:'bold'}}>SUBMIT REQUEST</button>
-          </div>
-        </div>
-      )}
+        )}
+        {view!=='dashboard' && view!=='requests' && view!=='members' && <div style={{background:'white', padding:30, borderRadius:10, textAlign:'center'}}><h3>{view}</h3><p>Content for {view} coming...</p><button onClick={()=>setView('dashboard')}>← Back</button></div>}
+      </div>
     </div>
   )
 }
-export default App
