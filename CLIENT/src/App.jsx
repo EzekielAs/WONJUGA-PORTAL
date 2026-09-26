@@ -67,6 +67,10 @@ function App() {
   }
 
   const approveRequest = async (req)=>{
+      const rejectRequest = async (req)=>{
+    if(!confirm(`Reject ${req.name} ?`)) return
+    await updateDoc(doc(db, "welfareRequests", req.id), {status: 'Rejected'})
+  }
     await updateDoc(doc(db, "welfareRequests", req.id), {status: 'Approved'})
     await addDoc(collection(db, "contributions"), {name: req.name, phone: req.phone, serviceNo: req.serviceNo, amount: 0, date: new Date().toLocaleDateString()})
     alert(`✅ ${req.name} APPROVED!`)
@@ -142,7 +146,7 @@ function App() {
           <h3>Welfare Requests - Approve</h3>
           {requests.map((r,i)=><div key={i} style={{background:'white', padding:12, marginBottom:8, borderRadius:8, borderLeft: r.status==='Pending' ? '4px solid orange' : '4px solid green'}}>
             <b>{r.name}</b> - {r.phone}<br/><small>Service No: {r.serviceNo}</small><br/><span style={{fontSize:10, background:'#fff3cd', padding:'2px 6px', borderRadius:4}}>{r.status}</span>
-            {r.status==='Pending' && isAdmin && <button onClick={()=>approveRequest(r)} style={{marginLeft:10, background:'#0b6e4f', color:'white', border:'none', padding:'6px 10px', borderRadius:4, fontSize:11}}>APPROVE</button>}
+           { r.status==='Pending' && isAdmin && <><button onClick={()=>approveRequest(r)} style={{marginLeft:10, background:'#0b6e4f', color:'white', border:'none', padding:'6px 10px', borderRadius:4, fontSize:11, cursor:'pointer'}}>APPROVE</button><button onClick={()=>rejectRequest(r)} style={{marginLeft:6, background:'#dc3545', color:'white', border:'none', padding:'6px 10px', borderRadius:4, fontSize:11, cursor:'pointer'}}>REJECT</button></>}
             {r.status==='Pending' && !isAdmin && <div style={{fontSize:11, color:'red', marginTop:4}}>Login as Admin to Approve</div>}
           </div>)}
         </div>
