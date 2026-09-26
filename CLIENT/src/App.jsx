@@ -3,13 +3,15 @@ import { initializeApp } from 'firebase/app'
 import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore'
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+const firebaseConfig = {
+  apiKey: "AIzaSyCqBe_TY3I4istScWiohcM1r4LQfEY2a7g",
+  authDomain: "wonjuga-portal.firebaseapp.com",
+  projectId: "wonjuga-portal",
+  storageBucket: "wonjuga-portal.firebasestorage.app",
+  messagingSenderId: "1081629612681",
+  appId: "1:1081629612681:web:ec07a5c82da1eb3f4a1f26"
 };
+ 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
