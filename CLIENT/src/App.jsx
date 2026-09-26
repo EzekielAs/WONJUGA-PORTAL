@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { useState, useEffect } from "react";
+import { initializeApp } from "firebase/app";
+import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
+import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+// --- ONLY ONE CONFIG - DO NOT DUPLICATE ---
 const firebaseConfig = {
   apiKey: "AIzaSyCqBe_TY3I4istScWiohcM1r4LQfEY2a7g",
   authDomain: "wonjuga-portal.firebaseapp.com",
@@ -10,61 +13,83 @@ const firebaseConfig = {
   messagingSenderId: "1081629612681",
   appId: "1:1081629612681:web:ec07a5c82da1eb3f4a1f26"
 };
+
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-export default function App(){
-  const [currentUser, setCurrentUser] = useState(JSON.parse(localStorage.getItem('wonjuga_user')||'null'))
-  const [isAdmin, setIsAdmin] = useState(localStorage.getItem('wonjuga_admin')==='true')
-  const [menuOpen, setMenuOpen] = useState(false); const [view, setView] = useState('dashboard')
-  const [requests, setRequests] = useState([]); const [members, setMembers] = useState([]); const [payments, setPayments] = useState([]); const [claims, setClaims] = useState([])
-  const [showAuth, setShowAuth] = useState(currentUser? 'dashboard' : 'login')
-  const [profilePic, setProfilePic] = useState(localStorage.getItem('wonjuga_pic')||null)
-  const fileRef = useRef(null)
-  const [phone, setPhone] = useState(''); const [serviceNo, setServiceNo] = useState('')
-  const [reqName, setReqName] = useState(''); const [reqPhone, setReqPhone] = useState(''); const [reqService, setReqService] = useState('')
-  const [adminU, setAdminU] = useState(''); const [adminP, setAdminP] = useState(''); const [showAdminLogin, setShowAdminLogin] = useState(false)
-  const [payAmount, setPayAmount] = useState(''); const [payMomo, setPayMomo] = useState(''); const [claimReason, setClaimReason] = useState(''); const [claimAmount, setClaimAmount] = useState('')
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [greeting, setGreeting] = useState("");
+  const [profilePic, setProfilePic] = useState(localStorage.getItem("wonjuga_pic") || "");
 
-  useEffect(()=>{
-    onSnapshot(collection(db, "welfareRequests"), s=> setRequests(s.docs.map(d=>({id:d.id,...d.data()}))))
-    onSnapshot(collection(db, "contributions"), s=> setMembers(s.docs.map(d=>({id:d.id,...d.data()}))))
-    onSnapshot(collection(db, "payments"), s=> setPayments(s.docs.map(d=>({id:d.id,...d.data()}))))
-    onSnapshot(collection(db, "claims"), s=> setClaims(s.docs.map(d=>({id:d.id,...d.data()}))))
-  },[])
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good Morning");
+    else if (hour < 17) setGreeting("Good Afternoon");
+    else setGreeting("Good Evening");
 
-  const getGreeting = ()=>{ const h=new Date().getHours(); if(h<12) return "Good Morning"; if(h<17) return "Good Afternoon"; return "Good Evening" }
-  const handlePicUpload = (e)=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=(ev)=>{ const b=ev.target.result; setProfilePic(b); localStorage.setItem('wonjuga_pic',b); alert("Profile Picture Saved Permanently!") }; r.readAsDataURL(f) }
-  const handleMemberLogin = ()=>{ if(!phone||!serviceNo) return alert("Enter Phone & Service No"); const found=members.find(m=>m.phone===phone&&m.serviceNo===serviceNo); if(!found){ alert("Not approved yet"); return } localStorage.setItem('wonjuga_user',JSON.stringify(found)); setCurrentUser(found); setShowAuth('dashboard') }
-  const handleAdminLogin = ()=>{ if(adminU==='admin'&&adminP==='wonjuga123'){ const a={name:"ADMIN",phone:"Admin",serviceNo:"ADMIN"}; localStorage.setItem('wonjuga_user',JSON.stringify(a)); localStorage.setItem('wonjuga_admin','true'); setCurrentUser(a); setIsAdmin(true); setShowAuth('dashboard')} else alert("Wrong") }
-  const handleRequestAccess = async()=>{ if(!reqName||!reqPhone||!reqService) return alert("Fill all"); await addDoc(collection(db,"welfareRequests"),{name:reqName,phone:reqPhone,serviceNo:reqService,date:new Date().toLocaleDateString(),status:'Pending'}); alert("Sent!"); setShowAuth('login') }
-  const logout = ()=>{ localStorage.removeItem('wonjuga_user'); localStorage.removeItem('wonjuga_admin'); setCurrentUser(null); setIsAdmin(false); setShowAuth('login') }
-  const approveRequest = async(r)=>{ await updateDoc(doc(db,"welfareRequests",r.id),{status:'Approved'}); if(!members.some(m=>m.phone===r.phone)){ await addDoc(collection(db,"contributions"),{name:r.name,phone:r.phone,serviceNo:r.serviceNo,amount:0,date:new Date().toLocaleDateString()}) } }
-  const handlePay = async()=>{ if(!payAmount||!payMomo) return alert("Enter Amount & MoMo"); await addDoc(collection(db,"payments"),{name:currentUser.name,phone:currentUser.phone,amount:parseFloat(payAmount),momo:payMomo,date:new Date().toLocaleString(),status:'Paid'}); const mem=members.find(m=>m.phone===currentUser.phone); if(mem) await updateDoc(doc(db,"contributions",mem.id),{amount:(mem.amount||0)+parseFloat(payAmount)}); alert(`GHS ${payAmount} Paid!`); setPayAmount(''); setPayMomo('') }
-  const handleClaim = async()=>{ if(!claimReason||!claimAmount) return alert("Fill all"); await addDoc(collection(db,"claims"),{name:currentUser.name,phone:currentUser.phone,reason:claimReason,amount:claimAmount,date:new Date().toLocaleString(),status:'Pending'}); alert("Claim Submitted"); setClaimReason(''); setClaimAmount('') }
+    onAuthStateChanged(auth, (u) => setUser(u));
 
-  if(!currentUser||showAuth!=='dashboard'){
-    return(<div style={{minHeight:'100vh',background:'#f0f4f0',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}><div style={{background:'white',maxWidth:400,width:'100%',borderRadius:16,padding:30}}><h2 style={{textAlign:'center',color:'#0b6e4f'}} onDoubleClick={()=>setShowAdminLogin(true)}>GIS WONJUGA WELFARE</h2>{showAuth==='login'?<><input placeholder="Phone" value={phone} onChange={e=>setPhone(e.target.value)} style={{width:'100%',padding:12,marginBottom:10,borderRadius:8,border:'1px solid #ddd'}}/><input placeholder="Service No" value={serviceNo} onChange={e=>setServiceNo(e.target.value)} style={{width:'100%',padding:12,marginBottom:15,borderRadius:8,border:'1px solid #ddd'}}/><button onClick={handleMemberLogin} style={{width:'100%',padding:12,background:'#0b6e4f',color:'white',border:'none',borderRadius:8,fontWeight:'bold'}}>LOGIN</button><p style={{textAlign:'center',marginTop:15,fontSize:13}}>No Access? <span onClick={()=>setShowAuth('request')} style={{color:'#0b6e4f',fontWeight:'bold',cursor:'pointer'}}>Request Access</span></p>{showAdminLogin&&<div style={{marginTop:15,background:'#fff3e0',padding:10,borderRadius:8}}><input placeholder="admin" value={adminU} onChange={e=>setAdminU(e.target.value)} style={{width:'100%',padding:8,marginBottom:5}}/><input type="password" placeholder="wonjuga123" value={adminP} onChange={e=>setAdminP(e.target.value)} style={{width:'100%',padding:8,marginBottom:5}}/><button onClick={handleAdminLogin} style={{width:'100%',padding:8,background:'black',color:'white'}}>Admin Login</button></div>}</>:<><input placeholder="Full Name" value={reqName} onChange={e=>setReqName(e.target.value)} style={{width:'100%',padding:12,marginBottom:10,borderRadius:8,border:'1px solid #ddd'}}/><input placeholder="Phone" value={reqPhone} onChange={e=>setReqPhone(e.target.value)} style={{width:'100%',padding:12,marginBottom:10,borderRadius:8,border:'1px solid #ddd'}}/><input placeholder="Service No" value={reqService} onChange={e=>setReqService(e.target.value)} style={{width:'100%',padding:12,marginBottom:15,borderRadius:8,border:'1px solid #ddd'}}/><button onClick={handleRequestAccess} style={{width:'100%',padding:12,background:'#ff9800',color:'white',border:'none',borderRadius:8}}>SUBMIT</button><p style={{textAlign:'center',marginTop:10,cursor:'pointer'}} onClick={()=>setShowAuth('login')}>← Back</p></>}</div></div>)
-  }
+    const unsub = onSnapshot(collection(db, "members"), (snap) => {
+      setMembers(snap.docs.map(d => ({ id: d.id,...d.data() })));
+    });
+    return () => unsub();
+  }, []);
 
-  return(<div style={{minHeight:'100vh',background:'#f5f5f5'}}>
-    <div style={{background:'#0b6e4f',color:'white',padding:'12px 15px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:100}}>
-      <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:'rgba(255,255,255,0.2)',border:'none',color:'white',fontSize:22,padding:'5px 10px',borderRadius:6}}>☰</button>
-      <h1 style={{margin:0,fontSize:16,fontWeight:'bold',flex:1,textAlign:'center'}}>GIS WONJUGA WELFARE</h1>
-      <div onClick={()=>fileRef.current.click()} style={{cursor:'pointer'}}>{profilePic?<img src={profilePic} style={{width:38,height:38,borderRadius:'50%',objectFit:'cover',border:'2px solid white'}}/>:<div style={{width:38,height:38,borderRadius:'50%',background:'#ff9800',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'bold'}}>{currentUser.name.charAt(0)}</div>}</div>
-      <input type="file" ref={fileRef} onChange={handlePicUpload} accept="image/*" style={{display:'none'}}/>
+  const handleProfileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const storageRef = ref(storage, `profiles/${auth.currentUser.uid}`);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    localStorage.setItem("wonjuga_pic", url);
+    setProfilePic(url);
+    await setDoc(doc(db, "members", auth.currentUser.uid), { photoURL: url }, { merge: true });
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <header className="flex justify-between items-center bg-white p-4 rounded shadow mb-4">
+        <h1 className="font-bold text-xl">Wonjuga Welfare Portal</h1>
+        <div className="flex items-center gap-3">
+          <span>{greeting}, {user?.email}</span>
+          <label className="cursor-pointer">
+            <img src={profilePic || "https://via.placeholder.com/40"} alt="profile" className="w-10 h-10 rounded-full object-cover border" />
+            <input type="file" hidden onChange={handleProfileUpload} accept="image/*" />
+          </label>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-white p-4 rounded shadow">Members: {members.length}</div>
+        <div className="bg-white p-4 rounded shadow">Contributions: Active</div>
+        <div className="bg-white p-4 rounded shadow">Requests: {members.filter(m=>m.request).length}</div>
+      </div>
+
+      <div className="bg-white p-4 rounded shadow">
+        <h2 className="font-bold mb-3">Members List</h2>
+        {members.map(m => (
+          <div key={m.id} className="flex justify-between items-center border-b py-2">
+            <div className="flex items-center gap-2">
+              <img src={m.photoURL || "https://via.placeholder.com/30"} className="w-8 h-8 rounded-full" alt="" />
+              <span>{m.name || m.email}</span>
+            </div>
+            <div className="flex gap-2">
+              <button className="bg-blue-500 text-white px-3 py-1 rounded text-sm">💳 Make Payment</button>
+              <button className="bg-green-500 text-white px-3 py-1 rounded text-sm">🤲 Claims/Welfare</button>
+              <button onClick={() => deleteDoc(doc(db, "members", m.id))} className="bg-red-500 text-white px-2 py-1 rounded text-sm">Delete</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="text-center mt-6">
+        <p>Fixed by Ezekiel - 26/09/2026</p>
+      </div>
     </div>
-    {menuOpen&&<div style={{position:'fixed',inset:0,zIndex:200,display:'flex'}}><div style={{width:270,background:'white',height:'100%',padding:20,overflowY:'auto'}}><div style={{display:'flex',justifyContent:'space-between',marginBottom:20}}><strong>Menu</strong><button onClick={()=>setMenuOpen(false)} style={{border:'none',background:'none',fontSize:20}}>✕</button></div>
-      {[{k:'dashboard',l:'📊 Dashboard'},{k:'contributions',l:'💰 My Contributions'},{k:'payments',l:'💳 Make Payment'},{k:'claims',l:'🤲 Claims / Welfare'},{k:'members',l:`👥 Members (${members.length})`},{k:'requests',l:`📝 Requests (${requests.filter(r=>r.status==='Pending').length})`}].map(m=><div key={m.k} onClick={()=>{setView(m.k); setMenuOpen(false)}} style={{padding:'12px',cursor:'pointer',borderRadius:8,background:view===m.k?'#e8f5e9':'transparent',marginBottom:5}}>{m.l}</div>)}
-      <hr/><div style={{fontSize:12}}><b>{currentUser.name}</b><br/>{currentUser.phone}<br/><span style={{color:'#0b6e4f',cursor:'pointer'}} onClick={()=>fileRef.current.click()}>📷 Change Picture</span><br/>{isAdmin&&<span style={{color:'green'}}>Admin</span>}</div><button onClick={logout} style={{marginTop:15,width:'100%',padding:10,background:'#dc3545',color:'white',border:'none',borderRadius:8}}>Logout</button></div><div style={{flex:1,background:'rgba(0,0,0,0.4)'}} onClick={()=>setMenuOpen(false)}></div></div>}
-    <div style={{padding:15,maxWidth:800,margin:'0 auto'}}>
-      {view==='dashboard'&&<><p style={{color:'#333',fontSize:14}}>{getGreeting()}, <b>{currentUser.name}</b>! 👋</p><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginTop:15}}><div onClick={()=>setView('contributions')} style={{background:'white',padding:15,borderRadius:12,cursor:'pointer'}}><div>💰</div><b style={{fontSize:13}}>Contributions</b><div style={{fontSize:12,color:'#0b6e4f',fontWeight:'bold'}}>GHS {members.find(m=>m.phone===currentUser.phone)?.amount||0}</div></div><div onClick={()=>setView('members')} style={{background:'white',padding:15,borderRadius:12,cursor:'pointer'}}><div>👥</div><b style={{fontSize:13}}>Members</b><div style={{fontSize:11}}>{members.length} Members</div></div><div onClick={()=>setView('payments')} style={{background:'white',padding:15,borderRadius:12,cursor:'pointer',border:'2px solid #0b6e4f'}}><div>💳</div><b style={{fontSize:13}}>Pay Dues</b><div style={{fontSize:11,color:'green'}}>Click to Pay</div></div><div onClick={()=>setView('claims')} style={{background:'white',padding:15,borderRadius:12,cursor:'pointer'}}><div>🤲</div><b style={{fontSize:13}}>Claims</b><div style={{fontSize:11}}>{claims.filter(c=>c.phone===currentUser.phone).length} My Claims</div></div></div></>}
-      {view==='contributions'&&<div style={{background:'white',padding:15,borderRadius:12}}><h3>My Contributions</h3><p>Total: <b>GHS {members.find(m=>m.phone===currentUser.phone)?.amount||0}</b></p>{payments.filter(p=>p.phone===currentUser.phone).map(p=><div key={p.id} style={{borderBottom:'1px solid #eee',padding:'8px 0',fontSize:13}}>GHS {p.amount} - {p.date} - {p.status}</div>)}</div>}
-      {view==='payments'&&<div style={{background:'white',padding:20,borderRadius:12}}><h3>💳 Payment System</h3><input placeholder="Amount GHS e.g 50" type="number" value={payAmount} onChange={e=>setPayAmount(e.target.value)} style={{width:'100%',padding:12,marginBottom:10,borderRadius:8,border:'1px solid #ddd'}}/><input placeholder="Your MoMo Number" value={payMomo} onChange={e=>setPayMomo(e.target.value)} style={{width:'100%',padding:12,marginBottom:15,borderRadius:8,border:'1px solid #ddd'}}/><button onClick={handlePay} style={{width:'100%',padding:12,background:'#0b6e4f',color:'white',border:'none',borderRadius:8,fontWeight:'bold'}}>PAY NOW</button><div style={{marginTop:20}}><h4>Recent Payments</h4>{payments.slice(0,10).map(p=><div key={p.id} style={{fontSize:12,padding:'5px 0',borderBottom:'1px solid #f0f0f0'}}>{p.name}: GHS {p.amount} - {p.status}</div>)}</div></div>}
-      {view==='claims'&&<div style={{background:'white',padding:20,borderRadius:12}}><h3>🤲 Welfare Claims</h3><input placeholder="Reason e.g Hospital, Funeral" value={claimReason} onChange={e=>setClaimReason(e.target.value)} style={{width:'100%',padding:12,marginBottom:10,borderRadius:8,border:'1px solid #ddd'}}/><input placeholder="Amount Needed" value={claimAmount} onChange={e=>setClaimAmount(e.target.value)} style={{width:'100%',padding:12,marginBottom:15,borderRadius:8,border:'1px solid #ddd'}}/><button onClick={handleClaim} style={{width:'100%',padding:12,background:'#ff9800',color:'white',border:'none',borderRadius:8,fontWeight:'bold'}}>SUBMIT CLAIM</button><div style={{marginTop:20}}>{claims.filter(c=>c.phone===currentUser.phone||isAdmin).map(c=><div key={c.id} style={{padding:10,background:'#f9f9f9',borderRadius:8,marginBottom:8,fontSize:13}}><b>{c.name}</b>: {c.reason} - GHS {c.amount} <span style={{float:'right',background:c.status==='Pending'?'orange':'green',color:'white',padding:'2px 6px',borderRadius:10,fontSize:10}}>{c.status}</span><br/><small>{c.date}</small>{isAdmin&&c.status==='Pending'&&<div style={{marginTop:5}}><button onClick={async()=>{await updateDoc(doc(db,"claims",c.id),{status:'Approved'})}} style={{background:'green',color:'white',border:'none',padding:'4px 8px',borderRadius:4,fontSize:11,marginRight:5}}>Approve</button><button onClick={async()=>{await deleteDoc(doc(db,"claims",c.id))}} style={{background:'red',color:'white',border:'none',padding:'4px 8px',borderRadius:4,fontSize:11}}>Reject</button></div>}</div>)}</div></div>}
-      {view==='members'&&<div style={{background:'white',padding:15,borderRadius:12}}><h3>Members ({members.length})</h3>{members.map(m=><div key={m.id} style={{padding:'10px 0',borderBottom:'1px solid #eee',display:'flex',justifyContent:'space-between'}}><span>{m.name}<br/><small>{m.phone} | {m.serviceNo}</small></span>{isAdmin&&<button onClick={async()=>{if(confirm(`Delete ${m.name}?`)) await deleteDoc(doc(db,"contributions",m.id))}} style={{background:'red',color:'white',border:'none',padding:'4px 8px',borderRadius:4,fontSize:10}}>Delete</button>}</div>)}</div>}
-      {view==='requests'&&<div style={{background:'white',padding:15,borderRadius:12}}><h3>Requests</h3>{requests.map(r=><div key={r.id} style={{borderBottom:'1px solid #eee',padding:'10px 0',display:'flex',justifyContent:'space-between'}}><div><b>{r.name}</b><div style={{fontSize:12}}>{r.phone}</div><span style={{fontSize:10,background:r.status==='Approved'?'#d4edda':'#fff3cd',padding:'2px 6px',borderRadius:10}}>{r.status}</span></div>{r.status==='Pending'&&isAdmin&&<><button onClick={()=>approveRequest(r)} style={{background:'#0b6e4f',color:'white',border:'none',padding:'6px 10px',borderRadius:4,fontSize:11}}>APPROVE</button><button onClick={async()=>{if(confirm(`Delete ${r.name}?`)) await deleteDoc(doc(db,"welfareRequests",r.id))}} style={{marginLeft:6,background:'#dc3545',color:'white',border:'none',padding:'6px 10px',borderRadius:4,fontSize:11}}>REJECT</button></>}</div>)}</div>}
-    </div>
-  </div>)
+  );
 }
-Fixed by Ezekiel 26-09-2026
+// Fixed by Ezekiel 26-09-2026 - FINAL
