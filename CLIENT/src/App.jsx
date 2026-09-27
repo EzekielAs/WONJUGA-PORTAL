@@ -124,7 +124,7 @@ export default function App(){
   const pieDash = `${(benefitPercent/100)*251} 251`;
 
   return(
-    <div style={{display:"flex",minHeight:"100vh",background:"#f5f7f5",fontFamily:"Inter, sans-serif"}}>
+   <div style={{display:"flex",minHeight:"100vh",background:"#f5f7f5",fontFamily:"Inter, sans-serif",fontSize:"15px"}}>
       <div style={{width:200,background:"white",borderRight:"1px solid #e5e7eb",position:"sticky",top:0,height:"100vh"}}>
         <div style={{padding:"14px 12px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}><div style={{width:28,height:28,background:"#0f5c2e",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontSize:12}}>🛡️</div><div style={{fontSize:9,fontWeight:700,lineHeight:1.1}}>GIS WONJUGA<br/>Member Portal</div></div>
         <div style={{padding:8}}>
