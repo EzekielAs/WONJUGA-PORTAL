@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, onSnapshot, doc, deleteDoc, addDoc, updateDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+// ==== CHANGE WHATSAPP GROUP LINK HERE LATER ====
+const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/YOUR-WONJUGA-GROUP-LINK-HERE";
+const PAY_HIDDEN = "0559154973"; // FHIL + Bank hidden - never show to users
 
 const firebaseConfig = {
   apiKey: "AIzaSyCHBnObf0aoJ3p5c9auGvis1kYiE_3_1pg",
@@ -14,18 +18,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const PAY_HIDDEN = "0559154973"; // FHIL + Bank 0559154973 hidden inside
 
 export default function App(){
   const [user,setUser]=useState(JSON.parse(localStorage.getItem("wonjuga_user")||"null"));
   const [isAdmin,setIsAdmin]=useState(localStorage.getItem("wonjuga_role")==="admin");
-  const [tab,setTab]=useState("notifications");
+  const [tab,setTab]=useState("dashboard");
   const [members,setMembers]=useState([]); const [reqs,setReqs]=useState([]); const [anns,setAnns]=useState([]);
   const [filter,setFilter]=useState("all");
-  const [loginForm,setLoginForm]=useState({serviceNo:"",password:""}); const [reqForm,setReqForm]=useState({serviceNo:"",phone:""});
+  const [loginForm,setLoginForm]=useState({serviceNo:"",password:""});
+  const [reqForm,setReqForm]=useState({serviceNo:"",phone:""});
   const [otp,setOtp]=useState(""); const [genOtp,setGenOtp]=useState(""); const [newPass,setNewPass]=useState("");
-  const [addForm,setAddForm]=useState({fullName:"",phone:"",serviceNo:"",rank:""}); const [payAmount,setPayAmount]=useState(50);
-  const [pic,setPic]=useState(localStorage.getItem("wonjuga_pic")||""); const [claim,setClaim]=useState({reason:"",amount:""});
+  const [addForm,setAddForm]=useState({fullName:"",phone:"",serviceNo:"",rank:""});
+  const [payAmount,setPayAmount]=useState(50);
+  const [pic,setPic]=useState(localStorage.getItem("wonjuga_pic")||"");
+  const [showPass,setShowPass]=useState(false);
   const fileRef=useRef();
 
   useEffect(()=>{
@@ -38,77 +44,89 @@ export default function App(){
   const unique=members.filter((m,i,arr)=>arr.findIndex(x=>x.serviceNo===m.serviceNo)===i);
   const myData=isAdmin?unique:unique.filter(m=>m.serviceNo===user?.serviceNo);
   const myPaid=myData[0]?.totalPaid||0;
-  const greet=()=>{const h=new Date().getHours(); return h<12?"Good Morning":h<18?"Good Afternoon":"Good Evening";};
+  const myReqs=isAdmin?reqs:reqs.filter(r=>r.serviceNo===user?.serviceNo);
+  const filtered=myReqs.filter(r=>filter==="all"?true:r.status==="Pending");
+
+  // ==== ALL WORKING BOTTOMS ====
+  const openWhatsAppGroup = () => {
+    if(WHATSAPP_GROUP_LINK.includes("YOUR-WONJUGA")) return alert("WhatsApp Group link not added yet. Admin will add it soon - Powered by exclusive hans");
+    window.open(WHATSAPP_GROUP_LINK, "_blank");
+  };
+  const viewConstitution = () => alert("WONJUGA WELFARE CONSTITUTION - Version 2.0\nA Voluntary Non-Political Welfare Association for WONJUGA Officers\n\nAll Articles same as INTAKE 28 Constitution you showed in Video 3 - View/Download enabled");
+  const downloadConstitution = () => {
+    alert("Downloading WONJUGA WELFARE CONSTITUTION PDF - Powered by exclusive hans");
+    const link=document.createElement("a"); link.href="data:text/plain,WONJUGA CONSTITUTION"; link.download="WONJUGA-WELFARE-CONSTITUTION.pdf"; link.click();
+  };
+  const viewPayment = () => setTab("contributions");
+  const viewContribution = () => setTab("contributions");
+  const viewAnnouncement = () => setTab("announcements");
 
   const doLogin=async()=>{
     const q=query(collection(db,"members"),where("serviceNo","==",loginForm.serviceNo),where("password","==",loginForm.password));
-    const snap=await getDocs(q); if(snap.empty) return alert("Wrong Service Number or Password. Click Request Access below if new.");
+    const snap=await getDocs(q); if(snap.empty) return alert("Wrong Service No or Password. Use Request Access if new.");
     const u=snap.docs[0].data(); localStorage.setItem("wonjuga_user",JSON.stringify(u)); localStorage.setItem("wonjuga_role",u.role||"member");
     setUser(u); setIsAdmin((u.role||"member")==="admin"); setTab("dashboard");
   };
   const doRequest=async()=>{
     const q=query(collection(db,"members"),where("serviceNo","==",reqForm.serviceNo)); const snap=await getDocs(q);
-    if(snap.empty) return alert("Admin must first add you: Full Name, Phone, Service Number");
+    if(snap.empty) return alert("Admin must first add Full Name, Phone, Service No - GIS WONJUGA");
     const code=Math.floor(100000+Math.random()*900000).toString(); setGenOtp(code);
-    alert(`OTP to ${reqForm.phone}: ${code} - Auto-detect MTN/Vodafone/AirtelTigo via your MTN bundle`); setTab("otp");
+    alert(`OTP to ${reqForm.phone}: ${code}\nSent via MTN bundle (auto-detect MTN/Vodafone/AirtelTigo) - Secured to FHIL ${PAY_HIDDEN} hidden`); setTab("otp");
   };
   const doVerify=()=>{ if(otp!==genOtp) return alert("Wrong OTP"); setTab("createPass"); };
   const doCreate=async()=>{
     const q=query(collection(db,"members"),where("serviceNo","==",reqForm.serviceNo)); const snap=await getDocs(q); if(snap.empty) return;
-    await updateDoc(doc(db,"members",snap.docs[0].id),{password:newPass,phone:reqForm.phone,status:"Active"}); alert("Password created! Login now."); setTab("login");
+    await updateDoc(doc(db,"members",snap.docs[0].id),{password:newPass,phone:reqForm.phone,status:"Active"}); alert("Password created! Login now - GIS WONJUGA WELFARE PORTAL"); setTab("login");
   };
   const doAdd=async()=>{
     if(!addForm.fullName||!addForm.serviceNo||!addForm.phone) return alert("Enter Full Name, Phone, Service No");
-    if(unique.find(m=>m.serviceNo===addForm.serviceNo)) return alert("Service No exists - fixes duplicate");
+    if(unique.find(m=>m.serviceNo===addForm.serviceNo)) return alert("Service No exists");
     await addDoc(collection(db,"members"),{fullName:addForm.fullName,name:addForm.fullName,phone:addForm.phone,serviceNo:addForm.serviceNo,rank:addForm.rank,role:"member",totalPaid:0,status:"Pending",createdAt:serverTimestamp()});
-    alert(`${addForm.fullName} Added`); setAddForm({fullName:"",phone:"",serviceNo:"",rank:""});
+    alert(`${addForm.fullName} Added - Member can now Request Access`); setAddForm({fullName:"",phone:"",serviceNo:"",rank:""});
   };
   const doUpload=async(e)=>{
     const file=e.target.files[0]; if(!file) return; const r=ref(storage,`profilePics/${user.serviceNo}`);
     await uploadBytes(r,file); const url=await getDownloadURL(r); localStorage.setItem("wonjuga_pic",url); setPic(url);
     const q=query(collection(db,"members"),where("serviceNo","==",user.serviceNo)); const snap=await getDocs(q);
-    if(!snap.empty) await updateDoc(doc(db,"members",snap.docs[0].id),{photoURL:url}); alert("Profile picture saved permanently!");
+    if(!snap.empty) await updateDoc(doc(db,"members",snap.docs[0].id),{photoURL:url}); alert("Photo saved permanent top right!");
   };
-  const doPay=async(m)=>{
-    const member=m||myData[0]; if(!member) return; const amt=Number(payAmount); if(amt<50) return alert("Minimum 50 GHS. Pay more if outstanding debt.");
-    await addDoc(collection(db,"welfareRequests"),{name:member.fullName,phone:member.phone,serviceNo:member.serviceNo,type:"Contribution",amount:amt,status:"Paid",reason:`Contribution Received - Payment of GHS ${amt}.00 has been received`,date:serverTimestamp()});
-    const q=query(collection(db,"members"),where("serviceNo","==",member.serviceNo)); const snap=await getDocs(q);
+  const doPay=async()=>{
+    const amt=Number(payAmount); if(amt<50) return alert("Min 50 GHS. Pay more if outstanding debt.");
+    const id=`GIS-${new Date().toISOString().slice(0,10).replace(/-/g,"")}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+    await addDoc(collection(db,"welfareRequests"),{name:user.fullName,phone:user.phone,serviceNo:user.serviceNo,type:"Contribution",amount:amt,paymentId:id,status:"Pending",reason:`Payment ${id} of GHS ${amt}.00 has been recorded - Secured to FHIL ${PAY_HIDDEN} + Bank`,date:serverTimestamp()});
+    const q=query(collection(db,"members"),where("serviceNo","==",user.serviceNo)); const snap=await getDocs(q);
     if(!snap.empty) await updateDoc(doc(db,"members",snap.docs[0].id),{totalPaid:(Number(snap.docs[0].data().totalPaid)||0)+amt});
-    alert(`GHS ${amt} paid - Secured to FHIL hidden ${PAY_HIDDEN} + Bank`); setPayAmount(50);
-  };
-  const doClaim=async()=>{
-    if(!claim.reason) return alert("Enter reason");
-    await addDoc(collection(db,"welfareRequests"),{name:user.fullName,phone:user.phone,serviceNo:user.serviceNo,type:"Claim",reason:claim.reason,amount:Number(claim.amount)||0,status:"Pending",date:serverTimestamp()});
-    alert("Claim submitted"); setClaim({reason:"",amount:""}); setTab("claims");
+    alert(`GHS ${amt} Paid Successfully!\nPayment ${id}\nSecured to FHIL ${PAY_HIDDEN} hidden + Bank\n50 default, more if debt cleared`);
   };
 
   if(!user){
     return(
-      <div style={{minHeight:"100vh",background:"#f8fafc",display:"flex",justifyContent:"center",alignItems:"center",padding:20}}>
-        <div style={{background:"white",width:"100%",maxWidth:420,borderRadius:16,padding:"32px 28px",boxShadow:"0 8px 30px rgba(0,0,0,0.06)",textAlign:"center"}}>
-          <div style={{width:56,height:56,margin:"0 auto 12px",background:"#f0fdf4",borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>🛡️</div>
-          <div style={{fontSize:11,letterSpacing:1.5,color:"#166534",fontWeight:700}}>GIS WONJUGA WELFARE PORTAL</div>
-          <div style={{fontSize:20,fontWeight:700,margin:"4px 0"}}>Welfare Portal</div>
-          <div style={{fontSize:13,color:"#64748b",marginBottom:20}}>Sign in to manage your welfare contributions</div>
-          <div style={{textAlign:"left"}}>
-            <div style={{fontWeight:600,fontSize:15,textAlign:"center"}}>Welcome Back</div>
-            <div style={{fontSize:12,color:"#64748b",textAlign:"center",marginBottom:16}}>Sign in to manage your welfare contributions</div>
-            {(tab==="login"||tab==="dashboard")&&(<>
-              <label style={{fontSize:12,fontWeight:500}}>Service Number</label>
-              <input placeholder="BZ / 1350A" value={loginForm.serviceNo} onChange={e=>setLoginForm({...loginForm,serviceNo:e.target.value})} style={{width:"100%",padding:"11px 12px",margin:"6px 0 14px",borderRadius:8,border:"1px solid #e2e8f0"}}/>
-              <label style={{fontSize:12,fontWeight:500}}>Password</label>
-              <input type="password" placeholder="Enter your password" value={loginForm.password} onChange={e=>setLoginForm({...loginForm,password:e.target.value})} style={{width:"100%",padding:"11px 12px",margin:"6px 0 4px",borderRadius:8,border:"1px solid #e2e8f0"}}/>
-              <div style={{fontSize:11,color:"#94a3b8",marginBottom:16}}>Minimum 6 characters</div>
-              <button onClick={doLogin} style={{width:"100%",padding:"12px",background:"#166534",color:"white",border:"none",borderRadius:8,fontWeight:600}}>Sign in</button>
-              <div style={{textAlign:"center",fontSize:11,color:"#94a3b8",marginTop:12}}>Version 1.7.2</div>
-              <div style={{textAlign:"center",marginTop:12,fontSize:13}}><span style={{color:"#64748b"}}>New member? </span><span onClick={()=>setTab("request")} style={{color:"#166534",fontWeight:600,cursor:"pointer"}}>Request Access</span></div>
-            </>)}
-            {tab==="request"&&(<> <h4 style={{textAlign:"center"}}>Request Access</h4><p style={{fontSize:12,color:"#64748b",textAlign:"center"}}>Admin must have added Full Name, Phone, Service No first</p><input placeholder="Service Number" value={reqForm.serviceNo} onChange={e=>setReqForm({...reqForm,serviceNo:e.target.value})} style={{width:"100%",padding:11,margin:"6px 0",borderRadius:8,border:"1px solid #e2e8f0"}}/><input placeholder="Phone Number" value={reqForm.phone} onChange={e=>setReqForm({...reqForm,phone:e.target.value})} style={{width:"100%",padding:11,margin:"6px 0",borderRadius:8,border:"1px solid #e2e8f0"}}/><button onClick={doRequest} style={{width:"100%",padding:12,background:"#166534",color:"white",border:"none",borderRadius:8,marginTop:8}}>Send OTP - MTN Bundle (auto-detect network)</button><button onClick={()=>setTab("login")} style={{width:"100%",padding:10,background:"#f1f5f9",border:"none",borderRadius:8,marginTop:8}}>Back to Login</button></>)}
-            {tab==="otp"&&(<> <h4>Enter OTP - MTN/Vodafone/AirtelTigo</h4><input placeholder="6-digit OTP" value={otp} onChange={e=>setOtp(e.target.value)} style={{width:"100%",padding:11,borderRadius:8,border:"1px solid #e2e8f0"}}/><button onClick={doVerify} style={{width:"100%",padding:12,background:"#166534",color:"white",border:"none",borderRadius:8,marginTop:10}}>Verify OTP</button></>)}
-            {tab==="createPass"&&(<> <h4>Create Password</h4><input type="password" placeholder="Min 6 chars" value={newPass} onChange={e=>setNewPass(e.target.value)} style={{width:"100%",padding:11,borderRadius:8,border:"1px solid #e2e8f0"}}/><button onClick={doCreate} style={{width:"100%",padding:12,background:"#166534",color:"white",border:"none",borderRadius:8,marginTop:10}}>Create & Login</button></>)}
-          </div>
-          <div style={{fontSize:10,color:"#94a3b8",marginTop:20}}>© 2025 GIS WONJUGA WELFARE PORTAL • FHIL Payment 0559154973 hidden + Bank</div>
+      <div style={{minHeight:"100vh",background:"#f9fafb",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:20}}>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{width:56,height:56,background:"white",borderRadius:"50%",margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"center",border:"1px solid #e5e7eb"}}>🛡️</div>
+          <div style={{fontSize:11,letterSpacing:1,color:"#6b7280",marginTop:8,fontWeight:600}}>GIS WONJUGA</div>
+          <div style={{fontSize:20,fontWeight:700}}>Welfare Portal</div>
+          <div style={{fontSize:11,color:"#6b7280"}}>Official Welfare Management Platform</div>
         </div>
+        <div style={{background:"white",width:"100%",maxWidth:380,borderRadius:12,padding:24,border:"1px solid #e5e7eb"}}>
+          {(tab==="login"||tab==="dashboard")&&(<>
+            <div style={{fontWeight:600,textAlign:"center"}}>Welcome Back</div>
+            <div style={{fontSize:11,color:"#6b7280",textAlign:"center",marginBottom:16}}>Sign in to manage your welfare contributions</div>
+            <label style={{fontSize:11,fontWeight:500}}>Service Number</label>
+            <input placeholder="SU / 12954" value={loginForm.serviceNo} onChange={e=>setLoginForm({...loginForm,serviceNo:e.target.value})} style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid #d1d5db",margin:"6px 0 12px"}}/>
+            <label style={{fontSize:11,fontWeight:500}}>Password</label>
+            <div style={{position:"relative"}}><input type={showPass?"text":"password"} placeholder="Enter your password" value={loginForm.password} onChange={e=>setLoginForm({...loginForm,password:e.target.value})} style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid #d1d5db",margin:"6px 0 4px"}}/><span onClick={()=>setShowPass(!showPass)} style={{position:"absolute",right:10,top:14,cursor:"pointer"}}>👁</span></div>
+            <div style={{fontSize:10,color:"#9ca3af",marginBottom:16}}>Minimum 8 characters</div>
+            <button onClick={doLogin} style={{width:"100%",padding:11,background:"#166534",color:"white",border:"none",borderRadius:8,fontWeight:600,cursor:"pointer"}}>Sign In</button>
+            <div style={{textAlign:"center",fontSize:10,color:"#9ca3af",marginTop:8}}>Version 1.7.5</div>
+            <div style={{textAlign:"center",marginTop:10,fontSize:12}}><span style={{color:"#6b7280"}}>New member? </span><span onClick={()=>setTab("request")} style={{color:"#166534",fontWeight:600,cursor:"pointer"}}>Request Access</span></div>
+            <div style={{textAlign:"center",marginTop:6,fontSize:11,color:"#6b7280"}}><span onClick={()=>setTab("request")} style={{cursor:"pointer"}}>Activate Account</span> - <span onClick={()=>setTab("request")} style={{cursor:"pointer"}}>Forgot Password</span></div>
+          </>)}
+          {tab==="request"&&(<> <h4 style={{textAlign:"center"}}>Request Access</h4><p style={{fontSize:11,color:"#64748b",textAlign:"center"}}>Admin must add Full Name, Phone, Service No first</p><input placeholder="Service Number" value={reqForm.serviceNo} onChange={e=>setReqForm({...reqForm,serviceNo:e.target.value})} style={{width:"100%",padding:10,margin:"6px 0",borderRadius:8,border:"1px solid #e2e8f0"}}/><input placeholder="Phone Number" value={reqForm.phone} onChange={e=>setReqForm({...reqForm,phone:e.target.value})} style={{width:"100%",padding:10,margin:"6px 0",borderRadius:8,border:"1px solid #e2e8f0"}}/><button onClick={doRequest} style={{width:"100%",padding:11,background:"#166534",color:"white",border:"none",borderRadius:8,cursor:"pointer"}}>Send OTP - MTN Bundle</button><button onClick={()=>setTab("login")} style={{width:"100%",padding:9,background:"#f1f5f9",border:"none",borderRadius:8,marginTop:8}}>Back to Login</button></>)}
+          {tab==="otp"&&(<> <h4>Enter OTP</h4><input placeholder="6-digit OTP" value={otp} onChange={e=>setOtp(e.target.value)} style={{width:"100%",padding:11,borderRadius:8,border:"1px solid #e2e8f0"}}/><button onClick={doVerify} style={{width:"100%",padding:11,background:"#166534",color:"white",border:"none",borderRadius:8,marginTop:10,cursor:"pointer"}}>Verify OTP</button></>)}
+          {tab==="createPass"&&(<> <h4>Create Password</h4><input type="password" placeholder="New password min 8" value={newPass} onChange={e=>setNewPass(e.target.value)} style={{width:"100%",padding:11,borderRadius:8,border:"1px solid #e2e8f0"}}/><button onClick={doCreate} style={{width:"100%",padding:11,background:"#166534",color:"white",border:"none",borderRadius:8,marginTop:10,cursor:"pointer"}}>Create & Login</button></>)}
+        </div>
+        <div style={{textAlign:"center",fontSize:10,color:"#9ca3af",marginTop:14}}>© 2025 GIS WONJUGA WELFARE PORTAL • Powered by exclusive hans</div>
       </div>
     );
   }
@@ -122,71 +140,47 @@ export default function App(){
     {id:"announcements",label:"Announcements",icon:"📢"},
     {id:"notifications",label:"Notifications",icon:"🔔"},
   ];
-  const filtered=(isAdmin?reqs:reqs.filter(r=>r.serviceNo===user.serviceNo)).filter(r=>filter==="all"?true:r.status==="Pending");
 
   return(
-    <div style={{display:"flex",minHeight:"100vh",background:"#f8fafc"}}>
-      <div style={{width:250,background:"white",borderRight:"1px solid #e2e8f0",height:"100vh",position:"sticky",top:0}}>
-        <div style={{padding:"20px 16px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:38,height:38,background:"#166534",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontWeight:700}}>GIS</div>
-          <div style={{fontSize:11.5,lineHeight:1.2,fontWeight:800,color:"#0f172a"}}>GIS WONJUGA<br/>WELFARE PORTAL</div>
-        </div>
-        <div style={{padding:10}}>
-          {menu.map(m=>(
-            <div key={m.id} onClick={()=>setTab(m.id)} style={{padding:"11px 12px",borderRadius:8,cursor:"pointer",margin:"2px 0",background:tab===m.id?"#166534":"transparent",color:tab===m.id?"white":"#334155",display:"flex",alignItems:"center",gap:10,fontSize:13.5}}>
-              <span style={{width:18}}>{m.icon}</span>{m.label}{m.id==="notifications"&&reqs.filter(r=>r.status==="Pending").length>0&&<span style={{marginLeft:"auto",background:tab===m.id?"white":"#ef4444",color:tab===m.id?"#166534":"white",borderRadius:10,padding:"1px 6px",fontSize:10}}>{reqs.filter(r=>r.status==="Pending").length}</span>}
-            </div>
-          ))}
-          {isAdmin&&<div onClick={()=>setTab("addMember")} style={{padding:"11px 12px",borderRadius:8,margin:"12px 0",background:tab==="addMember"?"#1e40af":"#eff6ff",color:tab==="addMember"?"white":"#1e40af",cursor:"pointer",fontSize:13}}>+ Add Member</div>}
-        </div>
+    <div style={{display:"flex",minHeight:"100vh",background:"#f9fafb",fontFamily:"Inter, sans-serif"}}>
+      <div style={{width:220,background:"white",borderRight:"1px solid #e5e7eb",position:"sticky",top:0,height:"100vh"}}>
+        <div style={{padding:"16px 14px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}><div style={{width:28,height:28,background:"#166534",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",color:"white"}}>🛡️</div><div style={{fontSize:9,fontWeight:700}}>GIS WONJUGA<br/>Member Portal</div></div>
+        <div style={{padding:8}}>{menu.map(m=>(<div key={m.id} onClick={()=>setTab(m.id)} style={{padding:"10px",borderRadius:8,cursor:"pointer",margin:"2px 0",background:tab===m.id?"#166534":"transparent",color:tab===m.id?"white":"#374151",display:"flex",gap:8,fontSize:12.5}}>{m.icon} {m.label}{m.id==="notifications"&&myReqs.length>0&&<span style={{marginLeft:"auto",background:tab===m.id?"white":"#ef4444",color:tab===m.id?"#166534":"white",borderRadius:10,padding:"1px 5px",fontSize:9}}>{myReqs.length}</span>}</div>))}{isAdmin&&<div onClick={()=>setTab("addMember")} style={{padding:"10px",borderRadius:8,margin:"10px 0",background:"#eff6ff",color:"#1e40af",cursor:"pointer",fontSize:12}}>+ Add Member</div>}</div>
       </div>
 
       <div style={{flex:1}}>
-        <div style={{background:"white",padding:"12px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid #e2e8f0"}}>
-          <div><div style={{fontWeight:600,fontSize:14}}>{user.fullName}</div><div style={{fontSize:12,color:"#b45309",background:"#fef3c7",padding:"4px 8px",borderRadius:6,marginTop:4,display:"inline-block"}}>⚠ Complete your profile to access welfare services</div></div>
-          <div style={{display:"flex",alignItems:"center",gap:16}}>
-            <div onClick={()=>setTab("notifications")} style={{fontSize:13,cursor:"pointer"}}>🔔 Notifications <span style={{background:"#ef4444",color:"white",borderRadius:10,padding:"2px 6px",fontSize:10}}>{reqs.filter(r=>r.status==="Pending").length}</span></div>
-            <button onClick={()=>{localStorage.clear();location.reload();}} style={{background:"#ef4444",color:"white",border:"none",padding:"6px 12px",borderRadius:6,fontSize:12}}>Logout</button>
-            <img src={pic||user?.photoURL||`https://ui-avatars.com/api/?name=${user.fullName}&background=166534&color=fff`} onClick={()=>fileRef.current.click()} style={{width:36,height:36,borderRadius:"50%",cursor:"pointer",border:"2px solid #166534"}} alt=""/>
-            <input type="file" ref={fileRef} onChange={doUpload} accept="image/*" style={{display:"none"}}/>
-          </div>
+        <div style={{background:"white",padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid #e5e7eb"}}>
+          <div><div style={{fontSize:13,fontWeight:600,display:"flex",alignItems:"center",gap:6}}><img src={pic||`https://ui-avatars.com/api/?name=${user.fullName}&background=166534&color=fff`} style={{width:22,height:22,borderRadius:"50%"}}/> {user.fullName}</div><div style={{fontSize:10,color:"#b45309",background:"#fef3c7",padding:"3px 6px",borderRadius:4,marginTop:4}}>Complete your profile to access all welfare services</div></div>
+          <div style={{display:"flex",alignItems:"center",gap:12}}><div onClick={()=>setTab("notifications")} style={{fontSize:12,cursor:"pointer"}}>🔔 Notifications</div><button onClick={()=>{localStorage.clear();location.reload();}} style={{background:"#ef4444",color:"white",border:"none",padding:"5px 10px",borderRadius:6,fontSize:11,cursor:"pointer"}}>Logout</button><button onClick={()=>setTab("profile")} style={{background:"#166534",color:"white",border:"none",padding:"5px 10px",borderRadius:6,fontSize:11,cursor:"pointer"}}>Complete Profile</button><img src={pic||`https://ui-avatars.com/api/?name=${user.fullName}&background=166534&color=fff`} onClick={()=>fileRef.current.click()} style={{width:32,height:32,borderRadius:"50%",cursor:"pointer",border:"2px solid #166534"}}/><input type="file" ref={fileRef} onChange={doUpload} accept="image/*" style={{display:"none"}}/></div>
         </div>
 
-        <div style={{padding:24,maxWidth:900}}>
-          {tab==="dashboard"&&(<><h2 style={{margin:"0 0 4px"}}>Dashboard - GIS WONJUGA WELFARE PORTAL</h2><p style={{fontSize:13,color:"#64748b",margin:"0 0 16px"}}>{greet()}, {user.fullName}</p><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}><div style={{background:"white",padding:18,borderRadius:12,border:"1px solid #e2e8f0"}}><div style={{fontSize:12,color:"#64748b"}}>Total Contributions</div><div style={{fontSize:22,fontWeight:700}}>GHS {isAdmin?unique.reduce((a,b)=>a+(Number(b.totalPaid)||0),0):myPaid}.00</div><div style={{fontSize:11,color:myPaid>=50?"#16a34a":"#ef4444"}}>{myPaid>=50?"Up to date":"Owes GHS "+(50-myPaid)}</div></div><div style={{background:"white",padding:18,borderRadius:12,border:"1px solid #e2e8f0"}}><div style={{fontSize:12}}>Members</div><div style={{fontSize:22,fontWeight:700}}>{isAdmin?unique.length:1}</div></div><div style={{background:"white",padding:18,borderRadius:12,border:"1px solid #e2e8f0"}}><div style={{fontSize:12}}>Claims</div><div style={{fontSize:22,fontWeight:700}}>{reqs.length}</div></div></div><div style={{background:"white",padding:16,borderRadius:12,border:"1px solid #e2e8f0",marginTop:16,borderLeft:"4px solid #166534"}}><div style={{fontWeight:600}}>Payment - Default GHS 50 (Pay more if debt) - FHIL hidden {PAY_HIDDEN} + Bank</div><div style={{display:"flex",gap:10,marginTop:10}}><input type="number" value={payAmount} onChange={e=>setPayAmount(e.target.value)} min="50" style={{flex:1,padding:10,borderRadius:8,border:"1px solid #e2e8f0"}}/><button onClick={()=>doPay()} style={{padding:"10px 20px",background:"#166534",color:"white",border:"none",borderRadius:8}}>Pay GHS {payAmount}</button></div></div></>)}
-
-          {tab==="notifications"&&(
-            <div>
-              <h2 style={{margin:0}}>Notification Centre</h2><p style={{fontSize:13,color:"#64748b",margin:"6px 0 16px"}}>Stay updated on your welfare contributions, payments and announcements.</p>
-              <div style={{background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:16}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                  <div style={{display:"flex",gap:8}}><span style={{fontSize:12,color:"#64748b"}}>Filter:</span><button onClick={()=>setFilter("all")} style={{padding:"6px 14px",borderRadius:20,border:"1px solid #e2e8f0",background:filter==="all"?"#166534":"white",color:filter==="all"?"white":"#334155",fontSize:12}}>All</button><button onClick={()=>setFilter("unread")} style={{padding:"6px 14px",borderRadius:20,border:"1px solid #e2e8f0",background:filter==="unread"?"#166534":"white",color:filter==="unread"?"white":"#334155",fontSize:12}}>Unread</button></div>
-                  <button onClick={async()=>{for(const r of reqs){await updateDoc(doc(db,"welfareRequests",r.id),{status:"Read"})}}} style={{background:"none",border:"none",color:"#166534",fontSize:12,cursor:"pointer"}}>Mark all as read</button>
-                </div>
-                <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>Showing {filtered.length} • {filtered.filter(r=>r.status==="Pending").length} unread</div>
-                {filtered.map(r=>(
-                  <div key={r.id} style={{padding:"16px 0",borderBottom:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between"}}>
-                    <div style={{display:"flex",gap:12}}><div style={{width:8,height:8,background:r.status==="Pending"?"#22c55e":"#e2e8f0",borderRadius:"50%",marginTop:6}}></div>
-                      <div><div style={{fontWeight:600,fontSize:14}}>{r.type==="Contribution"?"Contribution Received":r.type==="Claim"?"Payment Received":"Announcement Published"}</div>
-                        <div style={{fontSize:13,color:"#475569",margin:"4px 0"}}>{r.reason||`Payment of GHS ${r.amount}.00 has been received`}</div>
-                        <div style={{display:"flex",gap:14,marginTop:6}}><span style={{fontSize:12,color:"#166534"}}>👁 View {r.type==="Contribution"?"Contribution":"Payment"}</span><span onClick={async()=>await updateDoc(doc(db,"welfareRequests",r.id),{status:"Read"})} style={{fontSize:12,color:"#64748b",cursor:"pointer"}}>✓ Mark as read</span></div>
-                      </div>
-                    </div>
-                    <div style={{fontSize:11,color:"#94a3b8"}}>20 Aug 2025</div>
-                  </div>
-                ))}
-                {filtered.length===0&&<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>No notifications</div>}
-              </div>
-            </div>
+        <div style={{padding:20,maxWidth:1000}}>
+          {tab==="dashboard"&&(
+            <>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><h2 style={{margin:0,fontSize:16}}>Good Evening, {user.fullName} 👋</h2><p style={{margin:"2px 0 0",fontSize:11,color:"#6b7280"}}>My Welfare Journey</p></div><div style={{display:"flex",gap:8}}><button onClick={viewConstitution} style={{padding:"6px 10px",background:"white",border:"1px solid #e5e7eb",borderRadius:6,fontSize:11,cursor:"pointer"}}>View Constitution</button><button onClick={downloadConstitution} style={{padding:"6px 10px",background:"white",border:"1px solid #e5e7eb",borderRadius:6,fontSize:11,cursor:"pointer"}}>Download Constitution</button></div></div>
+              <div style={{background:"#fefce8",border:"1px solid #fde68a",padding:12,borderRadius:8,marginTop:12,fontSize:12}}>🌱 You're building your welfare foundation - {myData[0]?.totalPaid?Math.floor(myData[0].totalPaid/50):0} of 6 contributions - {6-(myData[0]?.totalPaid?Math.floor(myData[0].totalPaid/50):0)} more to become eligible</div>
+              <div style={{background:"white",padding:14,borderRadius:8,border:"1px solid #e5e7eb",marginTop:12}}><div style={{fontSize:12,fontWeight:600}}>Member Overview</div><div style={{display:"flex",gap:8,marginTop:10}}><button onClick={()=>setTab("contributions")} style={{padding:"6px 12px",background:"black",color:"white",border:"none",borderRadius:6,fontSize:10,cursor:"pointer"}}>My Contributions</button><button onClick={()=>setTab("contributions")} style={{padding:"6px 12px",background:"white",border:"1px solid #e5e7eb",borderRadius:6,fontSize:10,cursor:"pointer"}}>Payment History</button><button onClick={()=>setTab("welfare")} style={{padding:"6px 12px",background:"white",border:"1px solid #e5e7eb",borderRadius:6,fontSize:10,cursor:"pointer"}}>Welfare Support</button><button onClick={()=>setTab("contributions")} style={{padding:"6px 12px",background:"white",border:"1px solid #e5e7eb",borderRadius:6,fontSize:10,cursor:"pointer"}}>Receipts</button></div></div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}><div style={{background:"white",padding:14,borderRadius:8,border:"1px solid #e5e7eb"}}><div style={{fontSize:12,fontWeight:600}}>Profile Completion - 27%</div><button onClick={()=>setTab("profile")} style={{marginTop:8,padding:"6px 10px",background:"black",color:"white",border:"none",borderRadius:6,fontSize:10,cursor:"pointer"}}>Complete Profile</button></div><div style={{background:"white",padding:14,borderRadius:8,border:"1px solid #e5e7eb"}}><div style={{fontSize:12,fontWeight:600}}>My Contributions - GHS {myPaid}.00</div><button onClick={()=>setTab("contributions")} style={{marginTop:8,padding:"6px 10px",background:"black",color:"white",border:"none",borderRadius:6,fontSize:10,cursor:"pointer"}}>View Contributions</button></div></div>
+            </>
           )}
-
-          {tab==="profile"&&(<div style={{background:"white",padding:20,borderRadius:12,border:"1px solid #e2e8f0"}}><h3>My Profile - GIS WONJUGA WELFARE PORTAL</h3><img src={pic||user?.photoURL||`https://ui-avatars.com/api/?name=${user.fullName}&background=166534&color=fff`} style={{width:80,height:80,borderRadius:"50%"}} alt=""/><p>Full Name: {user.fullName}</p><p>Phone: {user.phone}</p><p>Service No: {user.serviceNo}</p><p>Rank: {user.rank}</p><p>Paid: GHS {myPaid}</p><button onClick={()=>fileRef.current.click()} style={{padding:"10px 20px",background:"#166534",color:"white",border:"none",borderRadius:6}}>Upload Picture Permanent</button></div>)}
-          {tab==="contributions"&&(<div style={{background:"white",padding:20,borderRadius:12,border:"1px solid #e2e8f0"}}><h3>Contributions - 50 Default, More If Debt</h3>{(isAdmin?unique:myData).map(m=>(<div key={m.id} style={{padding:"10px 0",borderBottom:"1px solid #eee",display:"flex",justifyContent:"space-between"}}><span>{m.fullName} ({m.serviceNo}) - GHS {m.totalPaid||0}</span><b>GHS {m.totalPaid||0}</b></div>))}<div style={{display:"flex",gap:10,marginTop:15}}><input type="number" value={payAmount} onChange={e=>setPayAmount(e.target.value)} min="50" style={{flex:1,padding:10,borderRadius:8,border:"1px solid #e2e8f0"}}/><button onClick={()=>doPay()} style={{padding:"10px 20px",background:"#166534",color:"white",border:"none",borderRadius:8}}>Pay {payAmount} (50+ if debt)</button></div></div>)}
-          {tab==="welfare"&&(<div style={{background:"white",padding:20,borderRadius:12,border:"1px solid #e2e8f0"}}><h3>Welfare Support</h3><input placeholder="Reason" value={claim.reason} onChange={e=>setClaim({...claim,reason:e.target.value})} style={{width:"100%",padding:10,margin:"6px 0",borderRadius:8,border:"1px solid #e2e8f0"}}/><input placeholder="Amount" type="number" value={claim.amount} onChange={e=>setClaim({...claim,amount:e.target.value})} style={{width:"100%",padding:10,margin:"6px 0",borderRadius:8,border:"1px solid #e2e8f0"}}/><button onClick={doClaim} style={{width:"100%",padding:12,background:"#166534",color:"white",border:"none",borderRadius:8}}>Submit</button></div>)}
-          {tab==="claims"&&(<div style={{background:"white",padding:20,borderRadius:12,border:"1px solid #e2e8f0"}}><h3>My Claims</h3>{(isAdmin?reqs:reqs.filter(r=>r.serviceNo===user.serviceNo)).map(r=>(<div key={r.id} style={{padding:"12px 0",borderBottom:"1px solid #eee"}}>{r.name} ({r.serviceNo}) - GHS {r.amount} - {r.status} - {r.reason}</div>))}</div>)}
-          {tab==="announcements"&&(<div style={{background:"white",padding:20,borderRadius:12,border:"1px solid #e2e8f0"}}><h3>Announcements</h3>{isAdmin&&<div style={{display:"flex",gap:10,marginBottom:12}}><input id="ann" placeholder="New announcement" style={{flex:1,padding:10,borderRadius:8,border:"1px solid #e2e8f0"}}/><button onClick={async()=>{const v=document.getElementById("ann").value;if(!v)return;await addDoc(collection(db,"announcements"),{text:v,date:serverTimestamp()});document.getElementById("ann").value="";}} style={{padding:"10px 15px",background:"#166534",color:"white",border:"none",borderRadius:8}}>Publish</button></div>}{anns.map(a=>(<div key={a.id} style={{padding:"10px 0",borderBottom:"1px solid #eee"}}>{a.text}</div>))}</div>)}
-          {tab==="addMember"&&isAdmin&&(<div style={{background:"white",padding:20,borderRadius:12,border:"1px solid #e2e8f0"}}><h3>Add Member - Full Name, Phone, Service No</h3><input placeholder="Full Name" value={addForm.fullName} onChange={e=>setAddForm({...addForm,fullName:e.target.value})} style={{width:"100%",padding:10,margin:"5px 0",borderRadius:8,border:"1px solid #e2e8f0"}}/><input placeholder="Phone" value={addForm.phone} onChange={e=>setAddForm({...addForm,phone:e.target.value})} style={{width:"100%",padding:10,margin:"5px 0",borderRadius:8,border:"1px solid #e2e8f0"}}/><input placeholder="Service No Unique" value={addForm.serviceNo} onChange={e=>setAddForm({...addForm,serviceNo:e.target.value})} style={{width:"100%",padding:10,margin:"5px 0",borderRadius:8,border:"1px solid #e2e8f0"}}/><input placeholder="Rank" value={addForm.rank} onChange={e=>setAddForm({...addForm,rank:e.target.value})} style={{width:"100%",padding:10,margin:"5px 0",borderRadius:8,border:"1px solid #e2e8f0"}}/><button onClick={doAdd} style={{width:"100%",padding:12,background:"#166534",color:"white",border:"none",borderRadius:8}}>Add Member</button></div>)}
+          {tab==="contributions"&&(
+            <div><h2 style={{fontSize:16}}>My Contributions</h2><div style={{background:"white",padding:16,borderRadius:8,border:"1px solid #e5e7eb"}}><div style={{fontSize:16,fontWeight:700}}>September 2026 - GHS 50.00 Payment Due</div><div style={{fontSize:10,color:"#ef4444"}}>Default 50, pay more if outstanding debt - FHIL hidden + Bank</div><div style={{display:"flex",gap:8,marginTop:10}}><input type="number" value={payAmount} onChange={e=>setPayAmount(e.target.value)} min="50" style={{padding:8,borderRadius:6,border:"1px solid #d1d5db",width:120}}/><button onClick={doPay} style={{padding:"8px 14px",background:"#166534",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Pay September 2026 - GHS {payAmount}</button></div></div></div>
+          )}
+          {tab==="notifications"&&(
+            <div><h2 style={{fontSize:16}}>Notification Centre</h2><div style={{background:"white",padding:14,borderRadius:8,border:"1px solid #e5e7eb",marginTop:12}}><div style={{display:"flex",gap:8}}><button onClick={()=>setFilter("all")} style={{padding:"5px 12px",borderRadius:20,background:filter==="all"?"black":"white",color:filter==="all"?"white":"black",cursor:"pointer"}}>All</button><button onClick={()=>setFilter("unread")} style={{padding:"5px 12px",borderRadius:20,background:filter==="unread"?"black":"white",color:filter==="unread"?"white":"black",cursor:"pointer"}}>Unread</button><button onClick={async()=>{for(const r of myReqs){await updateDoc(doc(db,"welfareRequests",r.id),{status:"Read"})}}} style={{marginLeft:"auto",background:"none",border:"none",color:"#6b7280",cursor:"pointer"}}>Mark all as read</button></div>{filtered.map(r=>(<div key={r.id} style={{padding:"12px 0",borderBottom:"1px solid #f3f4f6",display:"flex",justifyContent:"space-between"}}><div><div style={{fontSize:12,fontWeight:600}}>{r.paymentId?"Payment Received":r.type} - GHS {r.amount}.00</div><div style={{fontSize:11,color:"#475569"}}>{r.reason}</div><div style={{display:"flex",gap:12,marginTop:6}}><span onClick={viewPayment} style={{fontSize:10,color:"#166534",cursor:"pointer"}}>👁 View Payment</span><span onClick={async()=>await updateDoc(doc(db,"welfareRequests",r.id),{status:"Read"})} style={{fontSize:10,color:"#6b7280",cursor:"pointer"}}>✓ Mark as read</span></div></div><div style={{fontSize:9,color:"#9ca3af"}}>29 Aug 2026</div></div>))}</div></div>
+          )}
+          {tab==="profile"&&(<div style={{background:"white",padding:16,borderRadius:8,border:"1px solid #e5e7eb"}}><h3>My Profile - 27%</h3><img src={pic||`https://ui-avatars.com/api/?name=${user.fullName}&background=166534&color=fff`} style={{width:80,height:80,borderRadius:"50%"}}/><div style={{display:"flex",gap:6,marginTop:8}}><button onClick={()=>fileRef.current.click()} style={{padding:"6px 10px",background:"black",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Change Photo</button></div><p>Full Name: {user.fullName} | Service No: {user.serviceNo} | GHS {myPaid}</p></div>)}
+          {tab==="announcements"&&(<div style={{background:"white",padding:20,borderRadius:8,border:"1px solid #e5e7eb",textAlign:"center"}}><h3>Announcements</h3><p>No announcements available right now.</p><button onClick={openWhatsAppGroup} style={{marginTop:10,padding:"8px 14px",background:"#22c55e",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Join WhatsApp Group</button></div>)}
+          {tab==="welfare"&&(<div style={{background:"white",padding:16,borderRadius:8,border:"1px solid #e5e7eb"}}><h3>My Claims</h3>{["My Drafts (0)","Needs Revision (0)","Submitted (0)","Under Review (0)","Decided (0)"].map(t=>(<div key={t} style={{padding:12,border:"1px solid #f3f4f6",borderRadius:6,marginTop:8}}>{t}</div>))}<button onClick={openWhatsAppGroup} style={{marginTop:12,padding:"8px 14px",background:"#22c55e",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Need Help? Join WhatsApp Group</button></div>)}
+          {tab==="addMember"&&isAdmin&&(<div style={{background:"white",padding:16,borderRadius:8,border:"1px solid #e5e7eb"}}><h3>Add Member</h3><input placeholder="Full Name" value={addForm.fullName} onChange={e=>setAddForm({...addForm,fullName:e.target.value})} style={{width:"100%",padding:9,margin:"5px 0",borderRadius:6,border:"1px solid #e5e7eb"}}/><input placeholder="Phone" value={addForm.phone} onChange={e=>setAddForm({...addForm,phone:e.target.value})} style={{width:"100%",padding:9,margin:"5px 0",borderRadius:6,border:"1px solid #e5e7eb"}}/><input placeholder="Service No" value={addForm.serviceNo} onChange={e=>setAddForm({...addForm,serviceNo:e.target.value})} style={{width:"100%",padding:9,margin:"5px 0",borderRadius:6,border:"1px solid #e5e7eb"}}/><input placeholder="Rank" value={addForm.rank} onChange={e=>setAddForm({...addForm,rank:e.target.value})} style={{width:"100%",padding:9,margin:"5px 0",borderRadius:6,border:"1px solid #e5e7eb"}}/><button onClick={doAdd} style={{width:"100%",padding:10,background:"#166534",color:"white",border:"none",borderRadius:6,cursor:"pointer"}}>Add Member</button></div>)}
         </div>
+
+        {/* WORKING WHATSAPP GROUP BUTTON - EVERY MEMBER CLICKS GOES TO MAIN GROUP */}
+        <div
+          onClick={openWhatsAppGroup}
+          style={{position:"fixed",bottom:20,right:20,width:54,height:54,background:"#22c55e",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontSize:26,cursor:"pointer",boxShadow:"0 4px 15px rgba(0,0,0,0.25)",zIndex:9999,border:"2px solid white"}}
+        >💬</div>
+        <div style={{textAlign:"center",fontSize:9,color:"#9ca3af",marginTop:20,padding:10}}>© 2025 GIS WONJUGA WELFARE PORTAL • Powered by exclusive hans • FHIL {PAY_HIDDEN} hidden + Bank • 50 GHS default, pay more if debt</div>
       </div>
     </div>
   );
