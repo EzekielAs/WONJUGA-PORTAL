@@ -3,7 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/YOUR-WONJUGA-GROUP-LINK-HERE";
+const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/L5pezHIgjIS6J4uTVntugC";
 const PAY_HIDDEN = "0559154973";
 const OFFICIAL_COMMENCEMENT = new Date(2026, 9, 1); // CHANGE THIS when welfare officially commences
 
